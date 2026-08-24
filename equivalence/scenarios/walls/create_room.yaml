@@ -1,0 +1,32 @@
+# Vertical slice shape from PLAN.md D2: four walls forming a closed
+# rectangular room. Coordinates are centimeters in plan/model space.
+name: create-room
+description: >
+  Chain the wall tool around a 500x300 rectangle and close the loop with a
+  double-click on the starting corner, producing 4 walls and one room.
+target:
+  os: [linux]
+  mode: [tauri]
+setup:
+  - new_home:
+steps:
+  - select_tool: {tool: wall}
+  - set_magnetism: {enabled: false}
+  - click: {x: 100, y: 100}
+  - click: {x: 600, y: 100}
+  - click: {x: 600, y: 400}
+  - click: {x: 100, y: 400}
+  - click: {x: 100, y: 100, dbl: true}
+checkpoints:
+  - afterStep: 7
+    capture: [state]
+assertions:
+  - at: 7
+    artifact: state
+    kind: count
+    path: walls
+    value: 4
+  - at: 7
+    artifact: state
+    kind: exists
+    path: rooms
