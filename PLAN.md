@@ -32,7 +32,7 @@ re-explore the SH3D source before reading it.
 | B4 | view3d | B2 | homely/src/view3d | clone-dev | | todo | |
 | B5 | homely-capture | B2 | homely/src/automation | clone-dev | | todo | |
 | C1 | dsl | D1 | equivalence/eq/dsl | harness-dev | harness-dev | review | 19 pytest pass; ruff clean |
-| C2 | orchestrator | C1 | equivalence/eq/adapters | harness-dev | | todo | includes MockAdapter |
+| C2 | orchestrator | C1 | equivalence/eq/adapters | harness-dev | harness-dev | claimed | includes MockAdapter |
 | C3 | comparators | C2 | equivalence/eq/comparators | harness-dev | | todo | state+geometry first |
 | C4 | reporting-cli | C2 | equivalence/eq/reporting | harness-dev | | todo | |
 | C5 | visual-diff | C2,A4,B5 | equivalence/eq/comparators | harness-dev | | todo | waits on captures |
