@@ -24,3 +24,6 @@ equivalence/artifacts/captures/
 Thumbs.db
 .idea/
 .vscode/
+
+# Reference source tree (upstream GPL checkout, read-only)
+sweethome3d-7.5-wayland-patch/
