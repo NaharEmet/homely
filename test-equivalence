@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Run equivalence scenarios: ./test-equivalence <scenario-file-or-dir> [opts]
+set -euo pipefail
+cd "$(dirname "$0")"
+PY=".venv/bin/python"
+if [ ! -x "$PY" ]; then
+  PY="python3"
+fi
+exec "$PY" -m eq.reporting "$@"

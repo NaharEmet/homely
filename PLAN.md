@@ -34,7 +34,7 @@ re-explore the SH3D source before reading it.
 | C1 | dsl | D1 | equivalence/eq/dsl | harness-dev | harness-dev | review | 19 pytest pass; ruff clean |
 | C2 | orchestrator | C1 | equivalence/eq/adapters | harness-dev | harness-dev | review | mock+ws/tcp server+lockstep runner+ledger; 21 pytest pass; demo writes repo-root results/ (add /results/ to .gitignore?) |
 | C3 | comparators | C2 | equivalence/eq/comparators | harness-dev | harness-dev | review | deep-diff tolerances + ledger id-matching + geometry metrics + assertion eval + comparison.json; 21 pytest pass (61 total); ruff clean |
-| C4 | reporting-cli | C2 | equivalence/eq/reporting | harness-dev | harness-dev | claimed | |
+| C4 | reporting-cli | C2 | equivalence/eq/reporting | harness-dev | harness-dev | review | run_suite+summary.json+report.md L0-2 + ./test-equivalence wrapper (--level/--target); 12 pytest pass (73 total); ruff clean |
 | C5 | visual-diff | C2,A4,B5 | equivalence/eq/comparators | harness-dev | | todo | waits on captures |
 
 ## Sequencing waves
