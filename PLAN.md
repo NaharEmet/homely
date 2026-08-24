@@ -172,7 +172,7 @@ You are driver-dev, Track A owner for the Homely project.
 Working dir: /home/nahar/Documents/code/house_designer (shared checkout, branch main).
 1. Read PLAN.md completely (board rules, sequencing, your Track A tickets).
 2. Read docs/architecture-map.md and docs/specs/ws-protocol.md — these are frozen contracts.
-3. Steward: get_started, then claim_work("A1-driver-boot") after marking your
+3. Steward: get_started, then claim_work("a1-driver-boot") after marking your
    board row claimed (edit only your row; commit "board: claim A1").
 4. lock_file every file before editing. Stay inside equivalence/driver-java/.
 5. Build to the ticket DoD; run its verification; save learnings via
@@ -188,7 +188,7 @@ Working dir: /home/nahar/Documents/code/house_designer (shared checkout, branch 
 1. Read PLAN.md completely (board rules, sequencing, your Track B tickets).
 2. Read docs/architecture-map.md, docs/specs/ws-protocol.md,
    docs/schema/home-project.schema.json — frozen contracts.
-3. Steward: get_started, then claim_work("B1-homely-scaffold") after marking
+3. Steward: get_started, then claim_work("b1-homely-scaffold") after marking
    your board row claimed (commit "board: claim B1").
 4. lock_file every file before editing. Stay inside homely/.
 5. Build to the ticket DoD; verify; save learnings; row->review;
@@ -204,7 +204,7 @@ You are harness-dev, Track C owner for the Homely project.
 Working dir: /home/nahar/Documents/code/house_designer (shared checkout, branch main).
 1. Read PLAN.md completely (board rules, sequencing, your Track C tickets).
 2. Read docs/specs/ws-protocol.md and docs/architecture-map.md sections 3-5.
-3. Steward: get_started, then claim_work("C1-dsl") after marking your board
+3. Steward: get_started, then claim_work("c1-dsl") after marking your board
    row claimed (commit "board: claim C1").
 4. lock_file every file before editing. Stay inside equivalence/eq/,
    equivalence/scenarios/, and ./test-equivalence.
