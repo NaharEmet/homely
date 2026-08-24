@@ -22,7 +22,7 @@ re-explore the SH3D source before reading it.
 |--------|-------|------|-----------|-------|------------|--------|-------|
 | D0 | repo-init | — | repo root | grace | grace | done | git, skeleton, toolchain |
 | D1 | contracts | D0 | docs/ | grace | grace | done | schema+protocol+arch map |
-| A1 | driver-boot | D1 | equivalence/driver-java | driver-dev | driver-dev | claimed | |
+| A1 | driver-boot | D1 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 9/9 PASS; see ticket README |
 | A2 | driver-interact | A1 | equivalence/driver-java | driver-dev | | todo | |
 | A3 | driver-state | A2 | equivalence/driver-java | driver-dev | | todo | |
 | A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | | todo | |
