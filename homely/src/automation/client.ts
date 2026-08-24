@@ -87,10 +87,21 @@ export class AutomationClient {
   }
 
   private async handleMessage(msg: unknown): Promise<void> {
-    if (!isRequest(msg)) return
+    if (typeof msg !== 'object' || msg === null) return
+    const m = msg as AutomationRequest
+    if (typeof m.id !== 'string') return
+    if (typeof m.type !== 'string') {
+      this.send({
+        id: m.id,
+        ok: false,
+        error: 'request type must be a string',
+        code: 'INVALID_REQUEST',
+      })
+      return
+    }
     let result: CommandResult
     try {
-      result = await this.handler.execute(msg.type, msg.params ?? {})
+      result = await this.handler.execute(m.type, m.params ?? {})
     } catch (err) {
       result = {
         ok: false,
@@ -98,35 +109,31 @@ export class AutomationClient {
         code: 'INTERNAL',
       }
     }
-    this.send(result.ok ? { id: msg.id, ok: true, data: result.data } : { id: msg.id, ...result })
+    this.send(result.ok ? { id: m.id, ok: true, data: result.data } : { id: m.id, ...result })
   }
-}
-
-function isRequest(msg: unknown): msg is Required<AutomationRequest> {
-  return (
-    typeof msg === 'object' &&
-    msg !== null &&
-    typeof (msg as AutomationRequest).id === 'string' &&
-    typeof (msg as AutomationRequest).type === 'string'
-  )
 }
 
 export function hello(mode: string): HelloMessage {
   return { type: 'hello', app: 'homely', version: PROTOCOL_VERSION, mode }
 }
 
+function parsePort(raw: string | null | undefined): number | null {
+  if (raw === undefined || raw === null || !/^\d+$/.test(raw)) return null
+  const port = Number(raw)
+  return Number.isInteger(port) && port > 0 && port < 65536 ? port : null
+}
+
 /** Parse HOMELY_AUTOMATION_PORT from an env-like record (pure; testable). */
 export function automationPortFromEnv(env: Record<string, string | undefined> = {}): number | null {
-  const raw = env.HOMELY_AUTOMATION_PORT ?? process.env.HOMELY_AUTOMATION_PORT
-  const port = raw === undefined ? NaN : Number(raw)
-  return Number.isInteger(port) && port > 0 && port < 65536 ? port : null
+  const raw =
+    env.HOMELY_AUTOMATION_PORT ??
+    (typeof process !== 'undefined' ? process.env.HOMELY_AUTOMATION_PORT : undefined)
+  return parsePort(raw)
 }
 
 /** Seam for GUI launch: orchestrator may pass the port via query string. */
 export function automationPortFromSearch(search: string): number | null {
-  const raw = new URLSearchParams(search).get('automationPort')
-  const port = raw === null ? NaN : Number(raw)
-  return Number.isInteger(port) && port > 0 && port < 65536 ? port : null
+  return parsePort(new URLSearchParams(search).get('automationPort'))
 }
 
 export type { NormalizedHomeState }

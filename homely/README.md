@@ -53,8 +53,10 @@ and will come from env var `HOMELY_AUTOMATION_PORT` once wired into Tauri
 - Implemented in B1: `ping`, `new_home`, `get_state`, `get_capabilities`
 - Unknown commands answer `UNKNOWN_COMMAND`
 
-The authoritative contract is `../docs/specs/ws-protocol.md`; the JSON shape of
-`get_state` is validated against `../docs/schema/home-project.schema.json`.
+The authoritative contract is `../docs/specs/ws-protocol.md`. The test suite
+asserts the `get_state` payload against the required top-level keys and
+empty-home values from `../docs/schema/home-project.schema.json` (full
+JSON-Schema validation is planned for a later ticket).
 
 ## Layout
 

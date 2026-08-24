@@ -47,6 +47,7 @@ describe('ws protocol v1 handshake', () => {
       version: 1,
       mode: 'test',
     })
+    expect(orch.unexpected).toEqual([])
   })
 
   it('answers ping with pong', async () => {
@@ -139,19 +140,51 @@ describe('ws protocol v1 handshake', () => {
     expect(typeof res.error).toBe('string')
   })
 
-  it('matches responses to ids under concurrent requests', async () => {
+  it('matches responses to ids under concurrent distinct requests', async () => {
     await awaitHello()
-    const [p1, p2] = [orch.sendRequest('ping'), orch.sendRequest('ping')]
-    const [r1, r2] = await Promise.all([p1, p2])
+    const [r1, r2] = await Promise.all([
+      orch.sendRequest('ping'),
+      orch.sendRequest('get_capabilities'),
+    ])
     expect(r1.id).not.toBe(r2.id)
-    expect(r1.ok).toBe(true)
-    expect(r2.ok).toBe(true)
+    const pong = r1.data as { pong?: boolean; commands?: unknown }
+    const caps = r2.data as { pong?: boolean; commands?: unknown }
+    const byPong = [pong, caps].find((d) => d.pong === true)
+    const byCaps = [pong, caps].find((d) => Array.isArray(d.commands))
+    expect(byPong).toBeDefined()
+    expect(byCaps).toBeDefined()
   })
 
-  it('ignores malformed frames instead of crashing', async () => {
+  it('ignores malformed frames and still answers the next request', async () => {
     await awaitHello()
+    orch.sendRaw('')
+    orch.sendRaw('this is not json')
+    orch.sendRaw('42')
+    orch.sendRaw('[1,2,3]')
+    orch.sendRaw('"just a string"')
+    orch.sendRaw('\n\n')
     const res = await orch.sendRequest('ping')
     expect(res.ok).toBe(true)
+    expect(orch.unexpected).toEqual([])
+  })
+
+  it('answers INVALID_REQUEST for envelopes with a string id but bad type', async () => {
+    await awaitHello()
+    const pending = orch.awaitResponseFor('bad-1')
+    orch.sendRaw(JSON.stringify({ id: 'bad-1', type: 5 }))
+    const res = await pending
+    expect(res.id).toBe('bad-1')
+    expect(res.ok).toBe(false)
+    expect(res.code).toBe('INVALID_REQUEST')
+  })
+
+  it('silently drops envelopes without a string id', async () => {
+    await awaitHello()
+    orch.sendRaw(JSON.stringify({ id: 42, type: 'ping' }))
+    orch.sendRaw(JSON.stringify({ type: 'ping' }))
+    const res = await orch.sendRequest('ping')
+    expect(res.ok).toBe(true)
+    expect(orch.unexpected).toEqual([])
   })
 })
 
@@ -161,6 +194,16 @@ describe('port seams', () => {
     expect(automationPortFromEnv({})).toBeNull()
     expect(automationPortFromEnv({ HOMELY_AUTOMATION_PORT: 'nope' })).toBeNull()
     expect(automationPortFromEnv({ HOMELY_AUTOMATION_PORT: '-1' })).toBeNull()
+  })
+
+  it('rejects non-canonical numeric port strings', () => {
+    expect(automationPortFromEnv({ HOMELY_AUTOMATION_PORT: '0x10' })).toBeNull()
+    expect(automationPortFromEnv({ HOMELY_AUTOMATION_PORT: '+8765' })).toBeNull()
+    expect(automationPortFromEnv({ HOMELY_AUTOMATION_PORT: ' 8765' })).toBeNull()
+    expect(automationPortFromSearch('?automationPort=0x10')).toBeNull()
+    expect(automationPortFromSearch('?automationPort=%208765')).toBeNull()
+    expect(automationPortFromSearch('?automationPort=1.5')).toBeNull()
+    expect(automationPortFromSearch('?automationPort=65536')).toBeNull()
   })
 
   it('parses ?automationPort=', () => {

@@ -75,14 +75,25 @@ export class MockOrchestrator {
     const id = `req-${++this.idCounter}`
     const req: OrchestratorSentRequest = params === undefined ? { id, type } : { id, type, params }
     this.requestsSent.push(req)
+    const p = this.awaitResponseFor(id)
+    this.socket?.send(JSON.stringify(req) + '\n')
+    return p
+  }
+
+  /** Registers a pending response slot for an externally sent raw frame. */
+  awaitResponseFor(id: string, timeoutMs = 2000): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
-        reject(new Error(`timeout waiting for response to ${id} (${type})`))
-      }, 2000)
+        reject(new Error(`timeout waiting for response to ${id}`))
+      }, timeoutMs)
       this.pending.set(id, { resolve, timer })
-      this.socket?.send(JSON.stringify(req) + '\n')
     })
+  }
+
+  /** Sends arbitrary bytes as one newline-terminated frame (test seam). */
+  sendRaw(line: string): void {
+    this.socket?.send(line + '\n')
   }
 
   close(): Promise<void> {
