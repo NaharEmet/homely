@@ -1,0 +1,1031 @@
+{
+  "nodes": [
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "label": "Aggiungere livelli (Adding levels)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingLevels.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "label": "Aggiungere testo (Adding text)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingTexts.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "label": "Creare una casa (Creating a home)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "label": "Creare foto (Creating photos)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingPhotos.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingVideos_creatingVideoshelptopic",
+      "label": "Creare video (Creating videos)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingVideos.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "label": "Tracciare le dimensioni (Drawing dimensions)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingDimensions.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingPolylines_drawingPolylineshelptopic",
+      "label": "Tracciare polilinee e curve (Drawing polylines and curves)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingPolylines.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "label": "Disegnare stanze (Drawing rooms)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingRooms.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "label": "Disegnare muri (Drawing walls)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingWalls.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "label": "Modificare la vista 3D (Editing the 3D view)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editing3DView.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingCompass_editingCompasshelptopic",
+      "label": "Modificare bussola e posizione geografica (Editing compass and geographic location)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingCompass.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingDimensions_editingDimensionshelptopic",
+      "label": "Modificare dimensioni (Editing dimensions)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingDimensions.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "label": "Modificare arredamento (Editing furniture)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingLevels_editingLevelshelptopic",
+      "label": "Modificare livelli (Editing levels)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingLevels.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPolylines_editingPolylineshelptopic",
+      "label": "Modificare polilinee e curve (Editing polylines and curves)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPolylines.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "label": "Modificare le preferenze (Editing preferences)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPreferences.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "label": "Modificare le stanze (Editing rooms)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingRooms.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "label": "Modificare i muri (Editing walls)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingWalls.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingBackground_importingBackgroundhelptopic",
+      "label": "Importare immagine di sfondo (Importing background image)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingBackground.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingFurniture_importingFurniturehelptopic",
+      "label": "Importare arredamento (Importing furniture)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingFurniture.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "label": "Aiuto di Sweet Home 3D (Help index)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_printingHome_printingHomehelptopic",
+      "label": "Stampare una casa (Printing a home)",
+      "file_type": "document",
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/printingHome.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingLevels_editingLevelshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingBackground_importingBackgroundhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingTexts.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingTexts.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingDimensions_editingDimensionshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingTexts.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/addingTexts.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingPhotos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingPhotos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingCompass_editingCompasshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingPhotos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingPhotos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingPhotos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingVideos_creatingVideoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingVideos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingVideos_creatingVideoshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/creatingVideos.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingDimensions.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingDimensions_editingDimensionshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingDimensions.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingDimensions.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingPolylines_drawingPolylineshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingPolylines.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingPolylines_drawingPolylineshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPolylines_editingPolylineshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingPolylines.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingPolylines_drawingPolylineshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingPolylines.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingRooms_drawingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingBackground_importingBackgroundhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingHome_creatingHomehelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/drawingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editing3DView.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editing3DView.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editing3DView.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingCompass_editingCompasshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingCompass.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingCompass_editingCompasshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingVideos_creatingVideoshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingCompass.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingCompass_editingCompasshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingCompass.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingDimensions_editingDimensionshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingDimensions.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingDimensions_editingDimensionshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingDimensions.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingLevels_addingLevelshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingPhotos_creatingPhotoshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_creatingVideos_creatingVideoshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingFurniture_importingFurniturehelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingLevels_editingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingLevels_editingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_addingTexts_addingTextshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingLevels_editingLevelshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingLevels.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPolylines_editingPolylineshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPolylines.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPolylines_editingPolylineshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPolylines.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPreferences.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPreferences.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPreferences.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingPreferences.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editing3DView_editing3DViewhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingRooms_editingRoomshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingRooms.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingWalls_editingWallshelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/editingWalls.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingBackground_importingBackgroundhelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingWalls_drawingWallshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingBackground.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingBackground_importingBackgroundhelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingBackground.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingBackground_importingBackgroundhelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingBackground.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingFurniture_importingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingFurniture_editingFurniturehelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingFurniture_importingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_editingPreferences_editingPreferenceshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_importingFurniture_importingFurniturehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/importingFurniture.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_printingHome_printingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_drawingDimensions_drawingDimensionshelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/printingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_printingHome_printingHomehelptopic",
+      "target": "sweethome3d_7_5_wayland_patch_src_com_eteks_sweethome3d_viewcontroller_resources_help_it_index_indexhelptopic",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/nahar/Documents/code/house_designer/sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/viewcontroller/resources/help/it/printingHome.html",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

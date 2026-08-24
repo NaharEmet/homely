@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Node / Tauri
+node_modules/
+homely/dist/
+homely/src-tauri/target/
+dist/
+
+# Rust
+target/
+
+# Harness outputs
+equivalence/results/
+equivalence/artifacts/captures/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
