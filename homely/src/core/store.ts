@@ -23,15 +23,18 @@ export class HomeStore {
   }
 
   /**
-   * Run a mutation against a draft of the current state and record it as one
-   * undo step. Any divergent mutation clears the redo stack.
+   * Run a mutation against a private draft of the current state and record it
+   * as one undo step — only if the mutation completes without throwing, so a
+   * failed op never touches history or state. Any divergent mutation clears
+   * the redo stack.
    */
   apply(mutate: (draft: NormalizedHomeState) => void): void {
-    const previous = structuredClone(this.home)
-    mutate(this.home)
-    this.undoStack.push(previous)
+    const draft = structuredClone(this.home)
+    mutate(draft)
+    this.undoStack.push(this.home)
     if (this.undoStack.length > HomeStore.MAX_UNDO_DEPTH) this.undoStack.shift()
     this.redoStack = []
+    this.home = draft
   }
 
   undo(): boolean {

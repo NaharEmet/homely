@@ -21,16 +21,83 @@ export class ModelError extends Error {}
 type IdLike = { id: string }
 type CollectionKey = 'levels' | 'walls' | 'rooms' | 'furniture' | 'dimensionLines' | 'labels'
 
-function assert(condition: unknown, message: string): asserts condition {
+export function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new ModelError(message)
 }
 
-function requirePositive(value: number, field: string): void {
-  assert(typeof value === 'number' && Number.isFinite(value) && value > 0, `${field} must be > 0`)
+function requirePositive(value: unknown, field: string): void {
+  assert(
+    typeof value === 'number' && Number.isFinite(value) && value > 0,
+    `${field} must be a finite number > 0`,
+  )
 }
 
-function requireFinite(value: number, field: string): void {
+function requireFinite(value: unknown, field: string): void {
   assert(typeof value === 'number' && Number.isFinite(value), `${field} must be a finite number`)
+}
+
+/** Re-validates patches so updates can never smuggle schema-invalid state in. */
+function validatePatch(key: CollectionKey, patch: Record<string, unknown>): void {
+  switch (key) {
+    case 'walls': {
+      for (const field of ['xStart', 'yStart', 'xEnd', 'yEnd', 'height', 'heightAtEnd', 'arcExtent']) {
+        if (patch[field] !== undefined) requireFinite(patch[field], field)
+      }
+      if (patch.thickness !== undefined) requirePositive(patch.thickness, 'thickness')
+      break
+    }
+    case 'rooms': {
+      if (patch.points !== undefined) {
+        const points = patch.points
+        assert(
+          Array.isArray(points) && points.length >= 3,
+          `room needs at least 3 points, got ${Array.isArray(points) ? points.length : typeof points}`,
+        )
+        for (const point of points) {
+          assert(Array.isArray(point) && point.length === 2, 'room point must be [x, y]')
+          requireFinite(point[0], 'point x')
+          requireFinite(point[1], 'point y')
+        }
+      }
+      break
+    }
+    case 'furniture': {
+      for (const field of ['x', 'y', 'angleDeg', 'elevation', 'pitchDeg', 'rollDeg']) {
+        if (patch[field] !== undefined) requireFinite(patch[field], field)
+      }
+      for (const field of ['width', 'depth', 'height']) {
+        if (patch[field] !== undefined) requirePositive(patch[field], field)
+      }
+      if (patch.modelRotationDeg !== undefined) {
+        assert(Array.isArray(patch.modelRotationDeg), 'modelRotationDeg must be an array')
+        for (const entry of patch.modelRotationDeg) requireFinite(entry, 'modelRotationDeg entry')
+      }
+      break
+    }
+    case 'dimensionLines': {
+      for (const field of ['xStart', 'yStart', 'xEnd', 'yEnd', 'offset', 'elevationStart', 'elevationEnd']) {
+        if (patch[field] !== undefined) requireFinite(patch[field], field)
+      }
+      break
+    }
+    case 'labels': {
+      for (const field of ['x', 'y', 'angleDeg', 'elevation']) {
+        if (patch[field] !== undefined) requireFinite(patch[field], field)
+      }
+      if (patch.text !== undefined) assert(typeof patch.text === 'string', 'label text must be a string')
+      break
+    }
+    case 'levels': {
+      for (const field of ['elevation', 'floorThickness']) {
+        if (patch[field] !== undefined) requireFinite(patch[field], field)
+      }
+      if (patch.height !== undefined) requirePositive(patch.height, 'height')
+      if (patch.name !== undefined) {
+        assert(typeof patch.name === 'string' && patch.name.length > 0, 'level name required')
+      }
+      break
+    }
+  }
 }
 
 /**
@@ -65,12 +132,11 @@ export class HomeModel {
   }
 
   removeLevel(id: string): boolean {
-    let removed = false
+    const snapshot = this.store.getHome()
+    assert(snapshot.levels.some((level) => level.id === id), `unknown level: ${id}`)
     this.store.apply((h) => {
       const index = h.levels.findIndex((l) => l.id === id)
-      if (index < 0) return
-      h.levels.splice(index, 1)
-      removed = true
+      if (index >= 0) h.levels.splice(index, 1)
       // Dangling levelRefs revert to the default (null) level.
       for (const wall of h.walls) if (wall.levelRef === id) wall.levelRef = null
       for (const room of h.rooms) if (room.levelRef === id) room.levelRef = null
@@ -78,8 +144,7 @@ export class HomeModel {
       for (const d of h.dimensionLines) if (d.levelRef === id) d.levelRef = null
       for (const l of h.labels) if (l.levelRef === id) l.levelRef = null
     })
-    if (!removed) throw new ModelError(`unknown level: ${id}`)
-    return removed
+    return true
   }
 
   addWall(input: Omit<Wall, 'id'>): Wall {
@@ -228,14 +293,15 @@ export class HomeModel {
 
   setSelection(ids: string[]): string[] {
     assert(Array.isArray(ids), 'selection must be an array of ids')
+    const known = new Set<string>()
+    const snapshot = this.store.getHome()
+    for (const key of ['levels', 'walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
+      for (const item of snapshot[key]) known.add(item.id)
+    }
+    for (const id of ids) {
+      assert(known.has(id), `selection references unknown id: ${id}`)
+    }
     this.store.apply((h) => {
-      const known = new Set<string>()
-      for (const key of ['levels', 'walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
-        for (const item of h[key]) known.add(item.id)
-      }
-      for (const id of ids) {
-        assert(known.has(id), `selection references unknown id: ${id}`)
-      }
       h.selection = [...ids]
     })
     return [...ids]
@@ -254,7 +320,7 @@ export class HomeModel {
     })
   }
 
-  moveObserverCamera(patch: Partial<Omit<NormalizedHomeState['cameras']['observer'], never>>): void {
+  moveObserverCamera(patch: Partial<NormalizedHomeState['cameras']['observer']>): void {
     requireFiniteNumbers(patch)
     this.store.apply((h) => {
       Object.assign(h.cameras.observer, patch)
@@ -270,16 +336,14 @@ export class HomeModel {
   }
 
   setEnvironment(patch: Partial<EnvironmentState>): void {
+    if (patch.wallsAlpha !== undefined && patch.wallsAlpha !== null) {
+      const alpha = patch.wallsAlpha
+      assert(
+        typeof alpha === 'number' && Number.isFinite(alpha) && alpha >= 0 && alpha <= 1,
+        'wallsAlpha must be within [0, 1]',
+      )
+    }
     this.store.apply((h) => {
-      if (patch.wallsAlpha !== undefined) {
-        const alpha = patch.wallsAlpha
-        if (alpha !== null) {
-          assert(
-            typeof alpha === 'number' && Number.isFinite(alpha) && alpha >= 0 && alpha <= 1,
-            'wallsAlpha must be within [0, 1]',
-          )
-        }
-      }
       h.environment = { ...h.environment, ...patch }
     })
   }
@@ -289,30 +353,32 @@ export class HomeModel {
     id: string,
     patch: Partial<NormalizedHomeState[K][number]>,
   ): NormalizedHomeState[K][number] {
-    requireFiniteNumbers(patch as Record<string, unknown>)
+    const rest: Record<string, unknown> = { ...(patch as Record<string, unknown>) }
+    delete rest.id // ids are immutable; reassignment would break the ledger
+    validatePatch(key, rest)
+    requireFiniteNumbers(rest)
     let updated!: NormalizedHomeState[K][number]
     this.store.apply((h) => {
       const item = (h[key] as IdLike[]).find((candidate) => candidate.id === id)
       assert(item !== undefined, `unknown ${key} id: ${id}`)
-      Object.assign(item, patch)
+      Object.assign(item, rest)
       updated = item as NormalizedHomeState[K][number]
     })
     return structuredClone(updated)
   }
 
   private removeFrom(key: CollectionKey, id: string, label: string): boolean {
-    let removed = false
+    const snapshot = this.store.getHome()
+    const exists = (snapshot[key] as IdLike[]).some((item) => item.id === id)
+    assert(exists, `unknown ${label} id: ${id}`)
     this.store.apply((h) => {
       const list = h[key] as IdLike[]
       const index = list.findIndex((item) => item.id === id)
-      if (index < 0) return
-      list.splice(index, 1)
-      removed = true
+      if (index >= 0) list.splice(index, 1)
       const selection = h.selection.indexOf(id)
       if (selection >= 0) h.selection.splice(selection, 1)
     })
-    if (!removed) throw new ModelError(`unknown ${label} id: ${id}`)
-    return removed
+    return true
   }
 }
 

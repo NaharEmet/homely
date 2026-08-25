@@ -74,3 +74,15 @@
 - Undo capability flags are readable from HomeController's private
   undoManager via reflection (no --add-opens needed for unnamed-module
   access).
+
+## Clone-side protocol deviations (pending integrator amendment)
+
+- `add_furniture` (homely clone): ws-protocol.md:79 freezes the shape
+  `{catalogId, x, y, angleDeg?}` (catalog-driven add). The homely B2 handler
+  accepts the extended inline shape `{name, x, y, angleDeg?, width, depth,
+  height, elevation?, catalogId?}` — name + positive width/depth/height are
+  required, `catalogId` is optional passthrough. Rationale: the clone has no
+  furniture catalog yet, so a catalogId-only add cannot resolve dimensions.
+  INVALID_PARAMS otherwise; ids come from the creation-order ledger
+  (`furniture-N`). To be reconciled when the integrator amends the frozen doc
+  or B-ticket adds a catalog.

@@ -11,7 +11,6 @@ describe('HomeStore undo/redo', () => {
   it('add → undo restores previous state, redo reapplies it', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
-    const before = store.getHome()
     const wall = model.addWall(wallInput())
     expect(store.getHome().walls).toHaveLength(1)
     expect(store.canUndo()).toBe(true)
@@ -27,7 +26,6 @@ describe('HomeStore undo/redo', () => {
     expect(store.getHome().walls).toEqual([wall])
     expect(store.canUndo()).toBe(true)
     expect(store.canRedo()).toBe(false)
-    void before
   })
 
   it('undo/redo round-trip is byte-identical through the serializer', () => {
@@ -154,7 +152,7 @@ describe('HomeModel validation', () => {
       visible: true,
       viewable: true,
     })
-    const _wall = model.addWall({ ...wallInput(), levelRef: level.id })
+    model.addWall({ ...wallInput(), levelRef: level.id })
     model.removeLevel(level.id)
     const home = store.getHome()
     expect(home.levels).toHaveLength(0)
@@ -165,5 +163,63 @@ describe('HomeModel validation', () => {
     const model = new HomeModel(new HomeStore())
     expect(() => model.setEnvironment({ wallsAlpha: 1.5 })).toThrow(ModelError)
     expect(() => model.setEnvironment({ wallsAlpha: null })).not.toThrow()
+  })
+
+  it('a failed remove pushes no undo step and preserves redo history', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    model.addWall(wallInput())
+    store.undo()
+    expect(store.canRedo()).toBe(true)
+    const stateBeforeFailure = JSON.stringify(serializeHome(store.getHome()))
+    expect(() => model.removeWall('wall-999')).toThrow(ModelError)
+    expect(store.canRedo()).toBe(true)
+    expect(JSON.stringify(serializeHome(store.getHome()))).toBe(stateBeforeFailure)
+    expect(store.redo()).toBe(true)
+    expect(store.getHome().walls).toHaveLength(1)
+  })
+
+  it('a failed op on a fresh store leaves capabilities untouched', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    expect(() => model.removeWall('wall-1')).toThrow(ModelError)
+    expect(store.getHome().capabilities).toEqual({ canUndo: false, canRedo: false })
+  })
+
+  it('update paths re-validate schema invariants and reject bad patches', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const wall = model.addWall(wallInput())
+    const furniture = model.addFurniture({
+      name: 'x',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+    })
+    const label = model.addLabel({ text: 't', x: 0, y: 0 })
+    expect(() => model.updateWall(wall.id, { thickness: 0 })).toThrow(/thickness/)
+    expect(() => model.updateFurniture(furniture.id, { width: -3 })).toThrow(/width/)
+    expect(() =>
+      model.updateRoom(model.addRoom([[0, 0], [4, 0], [4, 3]]).id, {
+        points: [[NaN, 0], [1]] as unknown as Array<[number, number]>,
+      }),
+    ).toThrow(ModelError)
+    expect(() => model.updateLabel(label.id, { x: 'boom' as unknown as number })).toThrow(/x must be/)
+    // failed updates leave state + history untouched
+    const snapshotBefore = JSON.stringify(serializeHome(store.getHome()))
+    expect(() => model.updateWall(wall.id, { thickness: -1 })).toThrow(ModelError)
+    expect(JSON.stringify(serializeHome(store.getHome()))).toBe(snapshotBefore)
+  })
+
+  it('patches cannot reassign object ids', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const wall = model.addWall(wallInput())
+    model.updateWall(wall.id, { id: 'hacked' } as unknown as Partial<typeof wall>)
+    expect(store.getHome().walls[0]?.id).toBe(wall.id)
   })
 })

@@ -1,6 +1,6 @@
 import type { HomeStore } from '../core/store'
 import { serializeHome } from '../core/export'
-import { HomeModel, ModelError } from '../core/model'
+import { HomeModel, ModelError, assert } from '../core/model'
 import type { CommandHandler, CommandResult } from './client'
 
 const COMMANDS = [
@@ -54,8 +54,19 @@ export class HomelyCommandHandler implements CommandHandler {
       case 'get_capabilities':
         return { ok: true, data: { commands: [...this.commands] } }
       case 'add_furniture': {
+        // Frozen protocol shape is {catalogId,x,y,angleDeg?}; the clone has no
+        // catalog service yet, so dimensions must be supplied inline until a
+        // later ticket (deviation documented in docs/behaviours/).
+        const nameParam = params.name
+        assert(
+          typeof nameParam === 'string' && nameParam.length > 0,
+          'param name must be a non-empty string',
+        )
+        const catalogId = params.catalogId ?? null
+        assert(catalogId === null || typeof catalogId === 'string', 'param catalogId must be a string')
         const furniture = this.model.addFurniture({
-          name: String(params.name ?? ''),
+          name: nameParam,
+          catalogId,
           x: requireNumber(params, 'x'),
           y: requireNumber(params, 'y'),
           angleDeg: params.angleDeg === undefined ? 0 : requireNumber(params, 'angleDeg'),
@@ -67,12 +78,12 @@ export class HomelyCommandHandler implements CommandHandler {
         return { ok: true, data: { id: furniture.id } }
       }
       case 'undo': {
-        const undone = this.store.undo()
-        return { ok: true, data: { undone, canUndo: this.store.canUndo(), canRedo: this.store.canRedo() } }
+        this.store.undo()
+        return { ok: true, data: { canUndo: this.store.canUndo(), canRedo: this.store.canRedo() } }
       }
       case 'redo': {
-        const redone = this.store.redo()
-        return { ok: true, data: { redone, canUndo: this.store.canUndo(), canRedo: this.store.canRedo() } }
+        this.store.redo()
+        return { ok: true, data: { canUndo: this.store.canUndo(), canRedo: this.store.canRedo() } }
       }
       default:
         return { ok: false, error: `unknown command: ${type}`, code: 'UNKNOWN_COMMAND' }

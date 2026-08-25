@@ -35,6 +35,14 @@ describe('roundHalfEven', () => {
     expect(roundHalfEven(-1.2345)).toBeCloseTo(-1.234, 10)
     expect(roundHalfEven(-1.2355)).toBeCloseTo(-1.236, 10)
   })
+
+  it('resolves binary-float near-ties as exact decimal ties', () => {
+    // 8.1855 * 1000 === 8185.499999... in doubles; decimal half-even says 8186.
+    expect(roundHalfEven(8.1855)).toBe(8.186)
+    expect(roundHalfEven(-8.1865)).toBe(-8.186)
+    expect(roundHalfEven(2.5005)).toBe(2.5) // 2500.5 → even 2500
+    expect(roundHalfEven(2.5015)).toBe(2.502) // 2501.5 → even 2502
+  })
 })
 
 describe('normalizeAngle', () => {
@@ -106,6 +114,28 @@ describe('serializeHome determinism', () => {
     expect(f?.depth).toBe(20.988)
     expect(f?.height).toBe(90.13)
     expect(f?.elevation).toBe(2.5)
+  })
+
+  it('normalizes furniture pitch/roll and modelRotationDeg like all degree angles', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    model.addFurniture({
+      name: 'tilted',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+      pitchDeg: 185,
+      rollDeg: -180,
+      modelRotationDeg: [[540, -90, 315]],
+    })
+    const f = serializeHome(store.getHome()).furniture[0]
+    expect(f?.pitchDeg).toBe(-175)
+    expect(f?.rollDeg).toBe(180)
+    expect(f?.modelRotationDeg).toEqual([[180, -90, -45]])
   })
 
   it('does not mutate the input state', () => {

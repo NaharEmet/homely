@@ -15,11 +15,18 @@ export function roundHalfEven(value: number, decimals = 3): number {
   const floor = Math.floor(scaled)
   const diff = scaled - floor
   let rounded: number
-  if (diff > 0.5) rounded = floor + 1
-  else if (diff < 0.5) rounded = floor
-  else rounded = floor % 2 === 0 ? floor : floor + 1
+  // Binary-float products can land epsilon-below/above an exact decimal tie
+  // (e.g. 8.1855 * 1000 === 8185.499999...). Treat near-ties as ties so the
+  // result matches exact decimal half-even rounding (BigDecimal(String)).
+  if (Math.abs(diff - 0.5) < TIE_EPSILON) {
+    rounded = floor % 2 === 0 ? floor : floor + 1
+  } else {
+    rounded = diff > 0.5 ? floor + 1 : floor
+  }
   return rounded / factor
 }
+
+const TIE_EPSILON = 1e-9
 
 /** Normalize degrees into (-180, 180] (180 stays 180, -180 wraps to 180). */
 export function normalizeAngle(deg: number): number {
@@ -77,9 +84,11 @@ export function serializeHome(home: NormalizedHomeState): NormalizedHomeState {
       depth: roundLen(f.depth),
       height: roundLen(f.height),
       angleDeg: roundAngle(f.angleDeg)!,
-      pitchDeg: f.pitchDeg === undefined ? undefined : roundHalfEven(f.pitchDeg),
-      rollDeg: f.rollDeg === undefined ? undefined : roundHalfEven(f.rollDeg),
-      modelRotationDeg: f.modelRotationDeg?.map((triple) => triple.map(roundHalfEven) as [number, number, number]),
+      pitchDeg: f.pitchDeg === undefined ? undefined : roundAngle(f.pitchDeg),
+      rollDeg: f.rollDeg === undefined ? undefined : roundAngle(f.rollDeg),
+      modelRotationDeg: f.modelRotationDeg?.map(
+        (triple) => triple.map((v) => roundAngle(v)!) as [number, number, number],
+      ),
     })),
     dimensionLines: home.dimensionLines.map((d) => ({
       ...d,

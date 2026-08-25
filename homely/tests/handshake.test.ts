@@ -223,18 +223,17 @@ describe('ws protocol v1 handshake', () => {
     expect(state.capabilities).toEqual({ canUndo: true, canRedo: false })
 
     const undoRes = (await orch.sendRequest('undo')).data as {
-      undone: boolean
       canUndo: boolean
       canRedo: boolean
     }
-    expect(undoRes).toEqual({ undone: true, canUndo: false, canRedo: true })
+    // frozen wire shape is exactly {canUndo,canRedo} (ws-protocol.md)
+    expect(undoRes).toEqual({ canUndo: false, canRedo: true })
 
     const redoRes = (await orch.sendRequest('redo')).data as {
-      redone: boolean
       canUndo: boolean
       canRedo: boolean
     }
-    expect(redoRes).toEqual({ redone: true, canUndo: true, canRedo: false })
+    expect(redoRes).toEqual({ canUndo: true, canRedo: false })
     state = (await orch.sendRequest('get_state')).data as typeof state
     expect(state.furniture).toHaveLength(1)
 
@@ -245,6 +244,30 @@ describe('ws protocol v1 handshake', () => {
         expect(res.ok).toBe(false)
         expect(res.code).toBe('INVALID_PARAMS')
       })
+
+    // non-string name is rejected (no silent coercion)
+    await orch
+      .sendRequest('add_furniture', { name: 123, x: 0, y: 0, width: 1, depth: 1, height: 1 })
+      .then((res) => {
+        expect(res.ok).toBe(false)
+        expect(res.code).toBe('INVALID_PARAMS')
+      })
+
+    // catalogId passes through to the created object when dimensions are inline
+    const cat = await orch.sendRequest('add_furniture', {
+      catalogId: 'sample-123',
+      name: 'chair',
+      x: 10,
+      y: 10,
+      width: 20,
+      depth: 20,
+      height: 40,
+    })
+    expect(cat.ok).toBe(true)
+    const catState = (await orch.sendRequest('get_state')).data as {
+      furniture: Array<{ catalogId: string | null }>
+    }
+    expect(catState.furniture.at(-1)?.catalogId).toBe('sample-123')
 
     // new_home still clears history
     await orch.sendRequest('new_home')
