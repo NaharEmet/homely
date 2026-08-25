@@ -88,6 +88,26 @@ describe('serializeHome determinism', () => {
     expect(furniture?.angleDeg).toBeCloseTo(-175, 6)
   })
 
+  it('rounds furniture length fields (width/depth/height) half-even to 3 decimals', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    model.addFurniture({
+      name: 'odd-chair',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 50.12345,
+      depth: 20.9876,
+      height: 90.12951,
+      elevation: 2.50004,
+    })
+    const f = serializeHome(store.getHome()).furniture[0]
+    expect(f?.width).toBe(50.123)
+    expect(f?.depth).toBe(20.988)
+    expect(f?.height).toBe(90.13)
+    expect(f?.elevation).toBe(2.5)
+  })
+
   it('does not mutate the input state', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
