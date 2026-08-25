@@ -149,12 +149,57 @@ Screenshot proof: `debug_screenshot` of the live frame after the scripted
 4-wall room shows the closed 2m x 2m square in the plan view
 (/tmp/opencode/a2-room3.png; window title "Untitled 2 - Sweet Home 3D").
 
+## Protocol surface (A3 full state export)
+
+`get_state` now returns the complete NormalizedHomeState per
+`docs/schema/home-project.schema.json` v1: `schemaVersion`, `name`,
+`levels`, `walls`, `rooms`, `furniture`, `dimensionLines`, `labels`,
+`compass`, `cameras{top,observer}`, `environment`, `selection`,
+`activeTool`, `capabilities{canUndo,canRedo}`.
+
+Semantics worth remembering:
+
+- **SH3D default homes have ZERO Level objects.** A fresh home exports
+  `levels: []`; every object's `levelRef` is `null` (= implicit level 0,
+  exactly what the schema's `ref` def means by "null for default level").
+  Do not synthesize a fake default level.
+- Angles (furniture/camera/label/compass) are converted radians → degrees
+  and normalized to (-180, 180], rounded half-even to 3 decimals; lengths
+  likewise 3 decimals. `arcExtent` stays in radians (schema says so).
+- `capabilities.canUndo/canRedo` come from the controller's private
+  `UndoManager` via reflection (`setAccessible` is fine — SH3D classes are
+  on the classpath, i.e. the unnamed module). There is no public accessor.
+- Camera ids are stable strings (`camera-top-1`, `camera-observer-1`);
+  selection maps each selected model object through the same IdAssigner as
+  its collection, so a wall's id is identical inside `walls[]` and
+  `selection[]`.
+- `environment.skyColor/groundColor/lightColor` are always ints in SH3D
+  (never null); schema allows that.
+
+## Verification transcript (A3 DoD)
+
+```text
+$ DISPLAY=:1 ./run.sh 9442 &
+[driver] UI ready, home frame displayed
+$ ../../.venv/bin/python smoke_client.py 9442    # A1 + A2 + A3 suites
+PASS get_state #1 validates against schema (None)      # empty home
+...
+PASS get_state #11 validates against schema (None)     # after new_home
+PASS wall coords match clicked corners ([(100, 100, 300, 100), ...])
+PASS canUndo after createWalls ({'canUndo': True, 'canRedo': False})
+PASS copy+paste duplicates walls (8 walls, unique ids)
+smoke OK                            # 46/46 assertions, exit 0
+```
+
+Every one of the 11 `get_state` payloads captured during the run
+(empty → populated room → undo → redo → paste → delete → escape →
+fresh new_home) validated against the frozen schema with python
+jsonschema 4.26.
+
 ## Notes / limitations
 
 - GPL: this code links the prebuilt SH3D jars and must stay inside
   `equivalence/driver-java/`; nothing here may leak into `homely/`.
-- A3 (full state export) will replace `get_state`'s minimal walls read;
-  `get_capabilities` picks new commands up automatically.
 - All UI-touching handlers marshal via `EventQueue.invokeAndWait`.
 - The 3D pane prints black in `debug_screenshot` (JOGL heavyweight canvas
   does not render through printAll); the plan view renders fully.

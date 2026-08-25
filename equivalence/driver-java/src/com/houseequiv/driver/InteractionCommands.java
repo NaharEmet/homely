@@ -195,41 +195,278 @@ public final class InteractionCommands {
       return data;
     }));
 
-    // Minimal state read (A2 DoD): walls with driver-assigned ids.
-    // Full NormalizedHomeState export per docs/schema is ticket A3.
-    dispatcher.register("get_state", params -> app.callOnEdt(() -> {
-      Home home = home(app);
-      IdAssigner ids = app.ids();
-      JsonObject data = new JsonObject();
+    // Full NormalizedHomeState export per docs/schema/home-project.schema.json v1 (A3).
+    dispatcher.register("get_state", params -> app.callOnEdt(() -> buildState(app)));
+  }
 
-      JsonArray walls = new JsonArray();
-      for (Wall w : home.getWalls()) {
-        JsonObject wall = new JsonObject();
-        wall.addProperty("id", ids.idFor(w, "wall"));
-        wall.addProperty("x_start", round3(w.getXStart()));
-        wall.addProperty("y_start", round3(w.getYStart()));
-        wall.addProperty("x_end", round3(w.getXEnd()));
-        wall.addProperty("y_end", round3(w.getYEnd()));
-        wall.add("height", w.getHeight() == null
-            ? JsonNull.INSTANCE : new JsonPrimitive(round3(w.getHeight())));
-        wall.add("height_at_end", w.getHeightAtEnd() == null
-            ? JsonNull.INSTANCE : new JsonPrimitive(round3(w.getHeightAtEnd())));
-        wall.addProperty("thickness", round3(w.getThickness()));
-        walls.add(wall);
+  private static JsonObject buildState(Sh3dApplication app) {
+    requireUi(app);
+    Home home = home(app);
+    IdAssigner ids = app.ids();
+
+    JsonObject state = new JsonObject();
+    state.addProperty("schemaVersion", 1);
+    state.add("name", home.getName() == null
+        ? JsonNull.INSTANCE : new JsonPrimitive(home.getName()));
+
+    java.util.Map<com.eteks.sweethome3d.model.Level, String> levelIds =
+        new java.util.IdentityHashMap<>();
+    JsonArray levels = new JsonArray();
+    for (com.eteks.sweethome3d.model.Level l : home.getLevels()) {
+      String id = ids.idFor(l, "level");
+      levelIds.put(l, id);
+      JsonObject o = new JsonObject();
+      o.addProperty("id", id);
+      o.addProperty("name", l.getName());
+      o.addProperty("elevation", round3(l.getElevation()));
+      o.addProperty("floorThickness", round3(l.getFloorThickness()));
+      o.addProperty("height", round3(l.getHeight()));
+      o.addProperty("visible", l.isVisible());
+      o.addProperty("viewable", l.isViewable());
+      levels.add(o);
+    }
+    state.add("levels", levels);
+
+    JsonArray walls = new JsonArray();
+    for (Wall w : home.getWalls()) {
+      JsonObject wall = new JsonObject();
+      wall.addProperty("id", ids.idFor(w, "wall"));
+      wall.addProperty("xStart", round3(w.getXStart()));
+      wall.addProperty("yStart", round3(w.getYStart()));
+      wall.addProperty("xEnd", round3(w.getXEnd()));
+      wall.addProperty("yEnd", round3(w.getYEnd()));
+      wall.add("arcExtent", w.getArcExtent() == null
+          ? JsonNull.INSTANCE : new JsonPrimitive(round3(w.getArcExtent())));
+      wall.addProperty("thickness", round3(w.getThickness()));
+      wall.add("height", w.getHeight() == null
+          ? JsonNull.INSTANCE : new JsonPrimitive(round3(w.getHeight())));
+      wall.add("heightAtEnd", w.getHeightAtEnd() == null
+          ? JsonNull.INSTANCE : new JsonPrimitive(round3(w.getHeightAtEnd())));
+      wall.add("levelRef", ref(levelIds, w.getLevel()));
+      wall.add("leftSideColor", colorRef(w.getLeftSideColor()));
+      wall.add("rightSideColor", colorRef(w.getRightSideColor()));
+      wall.add("patternId", w.getPattern() == null
+          ? JsonNull.INSTANCE : new JsonPrimitive(w.getPattern().getName()));
+      walls.add(wall);
+    }
+    state.add("walls", walls);
+
+    JsonArray rooms = new JsonArray();
+    for (com.eteks.sweethome3d.model.Room r : home.getRooms()) {
+      JsonObject room = new JsonObject();
+      room.addProperty("id", ids.idFor(r, "room"));
+      room.add("name", r.getName() == null
+          ? JsonNull.INSTANCE : new JsonPrimitive(r.getName()));
+      JsonArray points = new JsonArray();
+      for (float[] p : r.getPoints()) {
+        JsonArray pt = new JsonArray();
+        pt.add(round3(p[0]));
+        pt.add(round3(p[1]));
+        points.add(pt);
       }
-      data.add("walls", walls);
+      room.add("points", points);
+      room.addProperty("areaVisible", r.isAreaVisible());
+      room.addProperty("floorVisible", r.isFloorVisible());
+      room.add("floorColor", colorRef(r.getFloorColor()));
+      room.addProperty("ceilingVisible", r.isCeilingVisible());
+      room.add("levelRef", ref(levelIds, r.getLevel()));
+      rooms.add(room);
+    }
+    state.add("rooms", rooms);
 
-      JsonArray selection = new JsonArray();
-      for (Selectable s : home.getSelectedItems()) {
-        if (s instanceof Wall) {
-          selection.add(ids.idFor(s, "wall"));
-        } else {
-          selection.add(ids.idFor(s, "item"));
+    JsonArray furniture = new JsonArray();
+    for (com.eteks.sweethome3d.model.HomePieceOfFurniture p : home.getFurniture()) {
+      JsonObject f = new JsonObject();
+      f.addProperty("id", ids.idFor(p, "furniture"));
+      f.add("catalogId", p.getCatalogId() == null
+          ? JsonNull.INSTANCE : new JsonPrimitive(p.getCatalogId()));
+      f.addProperty("name", p.getName());
+      f.addProperty("x", round3(p.getX()));
+      f.addProperty("y", round3(p.getY()));
+      f.addProperty("elevation", round3(p.getElevation()));
+      f.addProperty("angleDeg", toDeg(p.getAngle()));
+      f.addProperty("pitchDeg", toDeg(p.getPitch()));
+      f.addProperty("rollDeg", toDeg(p.getRoll()));
+      f.addProperty("width", round3(p.getWidth()));
+      f.addProperty("depth", round3(p.getDepth()));
+      f.addProperty("height", round3(p.getHeight()));
+      f.add("color", colorRef(p.getColor()));
+      f.addProperty("visible", p.isVisible());
+      f.addProperty("movable", p.isMovable());
+      f.addProperty("doorOrWindow",
+          p instanceof com.eteks.sweethome3d.model.DoorOrWindow);
+      float[][] rot = p.getModelRotation();
+      if (rot != null) {
+        JsonArray rows = new JsonArray();
+        for (float[] row : rot) {
+          JsonArray r2 = new JsonArray();
+          for (float v : row) {
+            r2.add(round3(v));
+          }
+          rows.add(r2);
         }
+        f.add("modelRotationDeg", rows);
       }
-      data.add("selection", selection);
-      return data;
-    }));
+      f.add("levelRef", ref(levelIds, p.getLevel()));
+      furniture.add(f);
+    }
+    state.add("furniture", furniture);
+
+    JsonArray dimensionLines = new JsonArray();
+    for (com.eteks.sweethome3d.model.DimensionLine d : home.getDimensionLines()) {
+      JsonObject o = new JsonObject();
+      o.addProperty("id", ids.idFor(d, "dimline"));
+      o.addProperty("xStart", round3(d.getXStart()));
+      o.addProperty("yStart", round3(d.getYStart()));
+      o.addProperty("xEnd", round3(d.getXEnd()));
+      o.addProperty("yEnd", round3(d.getYEnd()));
+      o.addProperty("offset", round3(d.getOffset()));
+      o.addProperty("elevationStart", round3(d.getElevationStart()));
+      o.addProperty("elevationEnd", round3(d.getElevationEnd()));
+      o.add("levelRef", ref(levelIds, d.getLevel()));
+      dimensionLines.add(o);
+    }
+    state.add("dimensionLines", dimensionLines);
+
+    JsonArray labels = new JsonArray();
+    for (com.eteks.sweethome3d.model.Label lb : home.getLabels()) {
+      JsonObject o = new JsonObject();
+      o.addProperty("id", ids.idFor(lb, "label"));
+      o.addProperty("text", lb.getText());
+      o.addProperty("x", round3(lb.getX()));
+      o.addProperty("y", round3(lb.getY()));
+      o.addProperty("angleDeg", toDeg(lb.getAngle()));
+      o.addProperty("elevation", round3(lb.getElevation()));
+      o.add("color", colorRef(lb.getColor()));
+      o.add("levelRef", ref(levelIds, lb.getLevel()));
+      labels.add(o);
+    }
+    state.add("labels", labels);
+
+    com.eteks.sweethome3d.model.Compass compass = home.getCompass();
+    JsonObject c = new JsonObject();
+    c.addProperty("x", round3(compass.getX()));
+    c.addProperty("y", round3(compass.getY()));
+    c.addProperty("diameter", round3(compass.getDiameter()));
+    c.addProperty("northDirectionDeg", toDeg(compass.getNorthDirection()));
+    c.addProperty("latitudeRad", round3(compass.getLatitude()));
+    c.addProperty("longitudeRad", round3(compass.getLongitude()));
+    c.addProperty("visible", compass.isVisible());
+    state.add("compass", c);
+
+    JsonObject cameras = new JsonObject();
+    cameras.add("top", cameraJson(ids, home.getTopCamera(), "camera-top"));
+    com.eteks.sweethome3d.model.ObserverCamera obs = home.getObserverCamera();
+    JsonObject oc = cameraJson(ids, obs, "camera-observer");
+    oc.addProperty("fixedSize", obs.isFixedSize());
+    cameras.add("observer", oc);
+    state.add("cameras", cameras);
+
+    com.eteks.sweethome3d.model.HomeEnvironment env = home.getEnvironment();
+    JsonObject e = new JsonObject();
+    e.addProperty("skyColor", env.getSkyColor());
+    e.addProperty("groundColor", env.getGroundColor());
+    e.addProperty("lightColor", env.getLightColor());
+    e.addProperty("wallsAlpha", round3(env.getWallsAlpha()));
+    state.add("environment", e);
+
+    JsonArray selection = new JsonArray();
+    for (Selectable s : home.getSelectedItems()) {
+      selection.add(new JsonPrimitive(selectableId(ids, s)));
+    }
+    state.add("selection", selection);
+    state.add("activeTool", activeToolJson(plan(app).getMode()));
+
+    JsonObject caps = new JsonObject();
+    caps.addProperty("canUndo", undoManagerOf(app).canUndo());
+    caps.addProperty("canRedo", undoManagerOf(app).canRedo());
+    state.add("capabilities", caps);
+    return state;
+  }
+
+  private static JsonObject cameraJson(IdAssigner ids,
+                                       com.eteks.sweethome3d.model.Camera cam,
+                                       String id) {
+    JsonObject o = new JsonObject();
+    o.addProperty("id", ids.idFor(cam, id));
+    o.addProperty("x", round3(cam.getX()));
+    o.addProperty("y", round3(cam.getY()));
+    o.addProperty("z", round3(cam.getZ()));
+    o.addProperty("yawDeg", toDeg(cam.getYaw()));
+    o.addProperty("pitchDeg", toDeg(cam.getPitch()));
+    o.addProperty("fovDeg", round3((float) Math.toDegrees(cam.getFieldOfView())));
+    if (cam.getLens() != null) {
+      o.addProperty("lens", cam.getLens().name());
+    }
+    return o;
+  }
+
+  private static String selectableId(IdAssigner ids, Selectable s) {
+    if (s instanceof Wall) return ids.idFor(s, "wall");
+    if (s instanceof com.eteks.sweethome3d.model.Room) return ids.idFor(s, "room");
+    if (s instanceof com.eteks.sweethome3d.model.DimensionLine) return ids.idFor(s, "dimline");
+    if (s instanceof com.eteks.sweethome3d.model.Label) return ids.idFor(s, "label");
+    if (s instanceof com.eteks.sweethome3d.model.Compass) return ids.idFor(s, "compass");
+    if (s instanceof com.eteks.sweethome3d.model.Camera) return ids.idFor(s, "camera");
+    return ids.idFor(s, "item");
+  }
+
+  private static JsonElement ref(java.util.Map<com.eteks.sweethome3d.model.Level, String> levelIds,
+                                 com.eteks.sweethome3d.model.Level level) {
+    if (level == null || !levelIds.containsKey(level)) {
+      return JsonNull.INSTANCE;
+    }
+    return new JsonPrimitive(levelIds.get(level));
+  }
+
+  private static JsonElement colorRef(Integer color) {
+    return color == null ? JsonNull.INSTANCE : new JsonPrimitive(color.intValue());
+  }
+
+  private static JsonElement activeToolJson(PlanController.Mode mode) {
+    if (mode == null) {
+      return JsonNull.INSTANCE;
+    }
+    switch (mode.name()) {
+      case "SELECTION": return new JsonPrimitive("selection");
+      case "PANNING": return new JsonPrimitive("panning");
+      case "WALL_CREATION": return new JsonPrimitive("wall");
+      case "ROOM_CREATION": return new JsonPrimitive("room");
+      case "POLYLINE_CREATION": return new JsonPrimitive("polyline");
+      case "DIMENSION_LINE_CREATION": return new JsonPrimitive("dimensionLine");
+      case "LABEL_CREATION": return new JsonPrimitive("label");
+      default: return JsonNull.INSTANCE;
+    }
+  }
+
+  /** Degrees from radians, normalized to (-180, 180], rounded to 3 decimals. */
+  private static double toDeg(float radians) {
+    double d = Math.toDegrees(radians) % 360.0;
+    if (d <= -180.0) {
+      d += 360.0;
+    } else if (d > 180.0) {
+      d -= 360.0;
+    }
+    return BigDecimal.valueOf(d).setScale(3, RoundingMode.HALF_EVEN).doubleValue();
+  }
+
+  private static final java.lang.reflect.Field UNDO_MANAGER_FIELD;
+  static {
+    try {
+      UNDO_MANAGER_FIELD =
+          com.eteks.sweethome3d.viewcontroller.HomeController.class.getDeclaredField("undoManager");
+      UNDO_MANAGER_FIELD.setAccessible(true);
+    } catch (NoSuchFieldException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
+  private static javax.swing.undo.UndoManager undoManagerOf(Sh3dApplication app) {
+    try {
+      return (javax.swing.undo.UndoManager) UNDO_MANAGER_FIELD.get(homeController(app));
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException("cannot read undo manager", e);
+    }
   }
 
   /**
