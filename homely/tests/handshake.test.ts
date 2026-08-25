@@ -138,6 +138,8 @@ describe('ws protocol v1 handshake', () => {
           'add_furniture',
           'undo',
           'redo',
+          'set_camera',
+          'camera_preset',
         ],
       },
     })

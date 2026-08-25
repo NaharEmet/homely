@@ -1,6 +1,9 @@
 import type { HomeStore } from '../core/store'
 import { serializeHome } from '../core/export'
 import { HomeModel, ModelError, assert } from '../core/model'
+import type { CameraPatch } from '../view3d/cameras'
+import { CameraDirector } from '../view3d/cameras'
+import type { ClickInput, DragInput, PlanEngine, PlanKey } from '../plan/engine'
 import type { CommandHandler, CommandResult } from './client'
 
 const COMMANDS = [
@@ -11,7 +14,16 @@ const COMMANDS = [
   'add_furniture',
   'undo',
   'redo',
+  'set_camera',
+  'camera_preset',
+  'select_tool',
+  'click',
+  'drag',
+  'key',
+  'set_magnetism',
 ] as const
+
+const CAMERA_FIELDS = ['x', 'y', 'z', 'yawDeg', 'pitchDeg', 'fovDeg'] as const
 
 function requireNumber(params: Record<string, unknown>, field: string): number {
   const value = params[field]
@@ -25,10 +37,19 @@ function requireNumber(params: Record<string, unknown>, field: string): number {
 export class HomelyCommandHandler implements CommandHandler {
   readonly commands = COMMANDS
 
+  private readonly store: HomeStore
   private readonly model: HomeModel
+  private readonly cameras: CameraDirector
+  private readonly plan: PlanEngine
 
-  constructor(private readonly store: HomeStore) {
-    this.model = new HomeModel(store)
+  constructor(store: HomeStore, options?: { planEngine?: PlanEngine }) {
+    this.store = store
+    const model = new HomeModel(store)
+    this.model = model
+    this.cameras = new CameraDirector(store, model)
+    // The GUI passes its engine so UI input and automation share one tool
+    // state machine; headless use lazily creates a private one.
+    this.plan = options?.planEngine ?? new PlanEngine(model)
   }
 
   execute(type: string, params: Record<string, unknown>): CommandResult {
@@ -84,6 +105,61 @@ export class HomelyCommandHandler implements CommandHandler {
       case 'redo': {
         this.store.redo()
         return { ok: true, data: { canUndo: this.store.canUndo(), canRedo: this.store.canRedo() } }
+      }
+      case 'set_camera': {
+        const patch: CameraPatch = {}
+        for (const field of CAMERA_FIELDS) {
+          if (params[field] !== undefined) patch[field] = requireNumber(params, field)
+        }
+        this.cameras.setCamera(patch)
+        return { ok: true, data: {} }
+      }
+      case 'camera_preset': {
+        // Frozen shape: {preset:"top"|"observer"} -> {camera:{...}} snapshot.
+        const preset = params.preset
+        assert(
+          preset === 'top' || preset === 'observer',
+          'param preset must be "top" or "observer"',
+        )
+        const camera = this.cameras.usePreset(preset)
+        return {
+          ok: true,
+          data: {
+            camera: {
+              x: camera.x,
+              y: camera.y,
+              z: camera.z,
+              yawDeg: camera.yawDeg,
+              pitchDeg: camera.pitchDeg,
+              fovDeg: camera.fovDeg,
+            },
+          },
+        }
+      }
+      case 'select_tool': {
+        const tool = params.tool
+        assert(typeof tool === 'string', 'param tool must be a string')
+        this.plan.setTool(tool)
+        return { ok: true, data: { tool } }
+      }
+      case 'click':
+        this.plan.click(params as unknown as ClickInput)
+        return { ok: true, data: {} }
+      case 'drag':
+        this.plan.drag(params as unknown as DragInput)
+        return { ok: true, data: {} }
+      case 'key': {
+        const key = params.key
+        assert(
+          key === 'escape' || key === 'delete' || key === 'backspace',
+          'param key must be escape|delete|backspace',
+        )
+        this.plan.key(key as PlanKey)
+        return { ok: true, data: {} }
+      }
+      case 'set_magnetism': {
+        this.plan.setMagnetism(params.enabled === true)
+        return { ok: true, data: { magnetismEnabled: params.enabled === true } }
       }
       default:
         return { ok: false, error: `unknown command: ${type}`, code: 'UNKNOWN_COMMAND' }
