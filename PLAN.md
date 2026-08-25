@@ -27,7 +27,7 @@ re-explore the SH3D source before reading it.
 | A3 | driver-state | A2 | equivalence/driver-java | driver-dev | | todo | |
 | A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | | todo | |
 | B1 | homely-scaffold | D1 | homely/ | clone-dev | clone-dev | review | 3650f6b build+test+smoke+tauri dev window verified |
-| B2 | homely-core | B1 | homely/src/core | clone-dev | | todo | |
+| B2 | homely-core | B1 | homely/src/core | clone-dev | clone-dev | claimed | |
 | B3 | plan-view | B2 | homely/src/plan | clone-dev | | todo | |
 | B4 | view3d | B2 | homely/src/view3d | clone-dev | | todo | |
 | B5 | homely-capture | B2 | homely/src/automation | clone-dev | | todo | |
