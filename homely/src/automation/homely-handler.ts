@@ -3,7 +3,8 @@ import { serializeHome } from '../core/export'
 import { HomeModel, ModelError, assert } from '../core/model'
 import type { CameraPatch } from '../view3d/cameras'
 import { CameraDirector } from '../view3d/cameras'
-import type { ClickInput, DragInput, PlanEngine, PlanKey } from '../plan/engine'
+import { PlanEngine, type ClickInput, type DragInput, type PlanKey } from '../plan/engine'
+import { CaptureService, type CaptureBackend } from './capture'
 import type { CommandHandler, CommandResult } from './client'
 
 const COMMANDS = [
@@ -21,6 +22,7 @@ const COMMANDS = [
   'drag',
   'key',
   'set_magnetism',
+  'screenshot',
 ] as const
 
 const CAMERA_FIELDS = ['x', 'y', 'z', 'yawDeg', 'pitchDeg', 'fovDeg'] as const
@@ -41,8 +43,12 @@ export class HomelyCommandHandler implements CommandHandler {
   private readonly model: HomeModel
   private readonly cameras: CameraDirector
   private readonly plan: PlanEngine
+  private readonly capture: CaptureService
 
-  constructor(store: HomeStore, options?: { planEngine?: PlanEngine }) {
+  constructor(
+    store: HomeStore,
+    options?: { planEngine?: PlanEngine; captureBackend?: CaptureBackend },
+  ) {
     this.store = store
     const model = new HomeModel(store)
     this.model = model
@@ -50,6 +56,7 @@ export class HomelyCommandHandler implements CommandHandler {
     // The GUI passes its engine so UI input and automation share one tool
     // state machine; headless use lazily creates a private one.
     this.plan = options?.planEngine ?? new PlanEngine(model)
+    this.capture = new CaptureService(store, this.cameras, options?.captureBackend)
   }
 
   execute(type: string, params: Record<string, unknown>): CommandResult {
@@ -160,6 +167,16 @@ export class HomelyCommandHandler implements CommandHandler {
       case 'set_magnetism': {
         this.plan.setMagnetism(params.enabled === true)
         return { ok: true, data: { magnetismEnabled: params.enabled === true } }
+      }
+      case 'screenshot': {
+        const view = params.view
+        assert(view === 'plan' || view === '3d', 'param view must be "plan" or "3d"')
+        const width = requireNumber(params, 'width')
+        const height = requireNumber(params, 'height')
+        return {
+          ok: true,
+          data: this.capture.screenshot({ view, width, height }),
+        }
       }
       default:
         return { ok: false, error: `unknown command: ${type}`, code: 'UNKNOWN_COMMAND' }
