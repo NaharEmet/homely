@@ -3,7 +3,7 @@ import { serializeHome } from '../core/export'
 import { HomeModel, ModelError, assert } from '../core/model'
 import type { CameraPatch } from '../view3d/cameras'
 import { CameraDirector } from '../view3d/cameras'
-import { PlanEngine, type ClickInput, type DragInput, type PlanKey } from '../plan/engine'
+import { PlanEngine, type ClickInput, type DragInput, type PlanKey, type PlanTool } from '../plan/engine'
 import { CaptureService, type CaptureBackend } from './capture'
 import type { CommandHandler, CommandResult } from './client'
 
@@ -146,7 +146,7 @@ export class HomelyCommandHandler implements CommandHandler {
       case 'select_tool': {
         const tool = params.tool
         assert(typeof tool === 'string', 'param tool must be a string')
-        this.plan.setTool(tool)
+        this.plan.setTool(tool as PlanTool)
         return { ok: true, data: { tool } }
       }
       case 'click':

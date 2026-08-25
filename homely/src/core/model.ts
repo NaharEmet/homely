@@ -15,6 +15,9 @@ import type { HomeStore } from './store'
 
 export const DEFAULT_LEVEL_HEIGHT_CM = DEFAULT_WALL_HEIGHT_CM
 
+/** DefaultUserPreferences.properties: newWallThickness=7.5 */
+export const NEW_WALL_THICKNESS_CM = 7.5
+
 /** Thrown by HomeModel ops on invalid input; surfaces as INVALID_PARAMS over automation. */
 export class ModelError extends Error {}
 
@@ -169,6 +172,86 @@ export class HomeModel {
     return this.removeFrom('walls', id, 'wall')
   }
 
+  /**
+   * Commits a wall chain (plus optional auto-detected room for a closed
+   * cycle) as ONE undoable compound operation — the clone-side equivalent of
+   * SH3D PlanController.validateDrawnWalls/postCreateWalls. New walls use
+   * the SH3D preference defaults (thickness 7.5 cm, height 250 cm).
+   */
+  addWallChain(
+    segments: Array<{ xStart: number; yStart: number; xEnd: number; yEnd: number }>,
+    withRoom = false,
+  ): { wallIds: string[]; roomId: string | null } {
+    assert(Array.isArray(segments) && segments.length > 0, 'wall chain needs at least one segment')
+    for (const segment of segments) {
+      requireFinite(segment.xStart, 'xStart')
+      requireFinite(segment.yStart, 'yStart')
+      requireFinite(segment.xEnd, 'xEnd')
+      requireFinite(segment.yEnd, 'yEnd')
+      assert(
+        Math.hypot(segment.xEnd - segment.xStart, segment.yEnd - segment.yStart) > 0,
+        'wall chain segments must have non-zero length',
+      )
+    }
+
+    const points: Array<[number, number]> = [[segments[0]!.xStart, segments[0]!.yStart]]
+    for (const segment of segments) {
+      points.push([segment.xEnd, segment.yEnd])
+    }
+
+    let roomPoints: Array<[number, number]> | null = null
+    if (withRoom && segments.length >= 3) {
+      const first = segments[0]!
+      const last = segments[segments.length - 1]!
+      const closed =
+        Math.abs(first.xStart - last.xEnd) < 1e-6 && Math.abs(first.yStart - last.yEnd) < 1e-6
+      if (closed) {
+        // Normalize to clockwise orientation (SH3D rooms are clockwise).
+        let area = 0
+        for (let i = 0; i < points.length; i++) {
+          const [ax, ay] = points[i]!
+          const [bx, by] = points[(i + 1) % points.length]!
+          area += ax * by - bx * ay
+        }
+        roomPoints = area < 0 ? points : [...points].reverse()
+      }
+    }
+
+    const wallIds: string[] = []
+    let roomId: string | null = null
+    this.store.apply((h) => {
+      for (const segment of segments) {
+        const wall: Wall = {
+          id: this.store.generateId('wall'),
+          xStart: segment.xStart,
+          yStart: segment.yStart,
+          xEnd: segment.xEnd,
+          yEnd: segment.yEnd,
+          thickness: NEW_WALL_THICKNESS_CM,
+          height: DEFAULT_WALL_HEIGHT_CM,
+        }
+        h.walls.push(wall)
+        wallIds.push(wall.id)
+      }
+      if (roomPoints) {
+        const room: Room = {
+          id: this.store.generateId('room'),
+          points: roomPoints.map(([x, y]) => [x, y] as [number, number]),
+          name: null,
+          areaVisible: true,
+          floorVisible: true,
+          floorColor: null,
+          ceilingVisible: false,
+          levelRef: null,
+        }
+        h.rooms.push(room)
+        roomId = room.id
+      }
+      h.selection = roomId ? [...wallIds, roomId] : [...wallIds]
+    })
+    return { wallIds: [...wallIds], roomId }
+  }
+
   addRoom(points: Array<[number, number]>, input: Partial<Omit<Room, 'id' | 'points'>> = {}): Room {
     assert(
       Array.isArray(points) && points.length >= 3,
@@ -293,8 +376,15 @@ export class HomeModel {
 
   setSelection(ids: string[]): string[] {
     assert(Array.isArray(ids), 'selection must be an array of ids')
-    const known = new Set<string>()
     const snapshot = this.store.getHome()
+    // A no-op selection change must not consume an undo step.
+    if (
+      snapshot.selection.length === ids.length &&
+      snapshot.selection.every((id, i) => id === ids[i])
+    ) {
+      return [...ids]
+    }
+    const known = new Set<string>()
     for (const key of ['levels', 'walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
       for (const item of snapshot[key]) known.add(item.id)
     }
@@ -377,6 +467,71 @@ export class HomeModel {
       if (index >= 0) list.splice(index, 1)
       const selection = h.selection.indexOf(id)
       if (selection >= 0) h.selection.splice(selection, 1)
+    })
+    return true
+  }
+
+  /** Bulk delete across all collections in ONE undo step (delete/backspace key). */
+  removeItems(ids: string[]): boolean {
+    assert(Array.isArray(ids) && ids.length > 0, 'removeItems needs at least one id')
+    const wanted = new Set(ids)
+    const snapshot = this.store.getHome()
+    const found = new Set<string>()
+    for (const key of ['levels', 'walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
+      for (const item of snapshot[key] as IdLike[]) {
+        if (wanted.has(item.id)) found.add(item.id)
+      }
+    }
+    for (const id of ids) {
+      assert(found.has(id), `unknown id: ${id}`)
+    }
+    this.store.apply((h) => {
+      for (const key of ['levels', 'walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
+        const list = h[key] as unknown as IdLike[]
+        ;(h as unknown as Record<typeof key, IdLike[]>)[key] = list.filter(
+          (item) => !wanted.has(item.id),
+        )
+      }
+      h.selection = h.selection.filter((id) => !wanted.has(id))
+    })
+    return true
+  }
+
+  /** Translates every selected item by (dx, dy) in ONE undo step. */
+  moveSelection(dx: number, dy: number): boolean {
+    requireFinite(dx, 'dx')
+    requireFinite(dy, 'dy')
+    const selection = new Set(this.store.getHome().selection)
+    if (selection.size === 0) return false
+    this.store.apply((h) => {
+      for (const wall of h.walls) {
+        if (!selection.has(wall.id)) continue
+        wall.xStart += dx
+        wall.yStart += dy
+        wall.xEnd += dx
+        wall.yEnd += dy
+      }
+      for (const room of h.rooms) {
+        if (!selection.has(room.id)) continue
+        room.points = room.points.map(([x, y]) => [x + dx, y + dy] as [number, number])
+      }
+      for (const f of h.furniture) {
+        if (!selection.has(f.id)) continue
+        f.x += dx
+        f.y += dy
+      }
+      for (const d of h.dimensionLines) {
+        if (!selection.has(d.id)) continue
+        d.xStart += dx
+        d.yStart += dy
+        d.xEnd += dx
+        d.yEnd += dy
+      }
+      for (const l of h.labels) {
+        if (!selection.has(l.id)) continue
+        l.x += dx
+        l.y += dy
+      }
     })
     return true
   }

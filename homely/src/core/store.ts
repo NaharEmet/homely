@@ -61,6 +61,14 @@ export class HomeStore {
     return this.redoStack.length > 0
   }
 
+  /**
+   * Mutates view-ish state (e.g. activeTool) WITHOUT recording an undo step —
+   * tool switches are not document edits (SH3D mode changes are not undoable).
+   */
+  patchNonUndoable(mutate: (draft: NormalizedHomeState) => void): void {
+    mutate(this.home)
+  }
+
   /** Opaque, creation-ordered ids; harness matches by ledger order, not format. */
   generateId(prefix: string): string {
     return `${prefix}-${this.idCounter++}`
