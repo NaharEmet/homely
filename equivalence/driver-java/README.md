@@ -196,6 +196,39 @@ Every one of the 11 `get_state` payloads captured during the run
 fresh new_home) validated against the frozen schema with python
 jsonschema 4.26.
 
+## Protocol surface (A4 capture-io)
+
+| Command | Params | Returns | Notes |
+|---|---|---|---|
+| `capture_plan` | `width`, `height`, `path` | `{path,width,height,bytes,sha256}` | Offscreen render of current home at requested pixel size, no chrome. Fresh standalone `PlanComponent` per call ⇒ byte-identical PNGs for identical calls. |
+| `capture_3d` | `width`, `height`, `path` | `{path,width,height,bytes,sha256}` | Delegates to `HomeComponent3D.getOffScreenImage(w,h)`: builds + cleans its own offscreen Java3D universe per call; SH3D clears + restores selection around it. |
+| `save_home` | `path` | `{path,walls}` | `HomeFileRecorder(9).writeHome` (DefaultHomeOutputStream, INCLUDE_ALL_CONTENT semantics) — plain `.sh3d` file. |
+| `open_home` | `path` | `{path,walls}` | `HomeFileRecorder(9).readHome` off-EDT, then `openHomeOnEdt`: fresh HomeFrameController (fresh undo stack), ids + clipboard reset. |
+
+PNG determinism: `ImageIO` PNG output contains no timestamps, so identical
+rasters produce byte-identical files. `capture_plan` paints into
+`TYPE_INT_RGB` after a white fill; `capture_3d` uses SH3D's own offscreen
+pipeline (fixed camera + lighting ⇒ deterministic).
+
+## Verification transcript (A4 DoD)
+
+```text
+$ DISPLAY=:1 ./run.sh 9444 &
+[driver] listening on 127.0.0.1:9444
+$ ../../.venv/bin/python smoke_client.py 9444    # A1+A2+A3+A4 suites
+PASS two identical plan captures are byte-identical
+PASS two identical 3D captures are byte-identical
+PASS save_home ({'path': '/tmp/opencode/a4/a4-room.sh3d', 'walls': 4})
+PASS open_home restores identical wall coords
+PASS ids re-assigned after open (['wall-1', 'wall-2', 'wall-3', 'wall-4'])
+smoke OK                            # 63/63 assertions, exit 0
+```
+
+Content proof (visual): after the scripted room, `capture_plan` shows the
+closed 2x2m square with hatched walls on the grid; `capture_3d` shows the
+4-wall box from the default top camera (z=1010, pitch 45°). Empty-home
+captures show grid+compass (plan) / ground plane (3D).
+
 ## Notes / limitations
 
 - GPL: this code links the prebuilt SH3D jars and must stay inside
@@ -203,3 +236,7 @@ jsonschema 4.26.
 - All UI-touching handlers marshal via `EventQueue.invokeAndWait`.
 - The 3D pane prints black in `debug_screenshot` (JOGL heavyweight canvas
   does not render through printAll); the plan view renders fully.
+  Use `capture_3d` for real 3D pixels (offscreen Java3D universe).
+- Each `capture_plan` creates a standalone `PlanComponent` whose transient
+  model listeners accumulate on the shared home; bounded by capture count,
+  acceptable for harness-scale runs.

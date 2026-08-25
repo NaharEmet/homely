@@ -53,19 +53,33 @@ public final class Sh3dApplication extends SweetHome3D {
 
   public void newHomeOnEdt() throws Exception {
     EventQueue.invokeAndWait(() -> {
-      Home freshHome = createHome();
-      HomeFrameController previous = frameController;
-      Window previousWindow = previous == null
-          ? null
-          : SwingUtilities.getWindowAncestor((Component) previous.getView());
-      frameController = createHomeFrameController(freshHome);
-      frameController.displayView();
-      if (previousWindow != null) {
-        previousWindow.dispose();
-      }
-      ids.reset();
-      home = freshHome;
+      swapHomeOnEdt(createHome());
     });
+  }
+
+  /**
+   * Replaces the displayed home with a pre-loaded one (open_home). The home is
+   * expected to be read off-EDT (file IO) by the caller.
+   */
+  public void openHomeOnEdt(Home loaded) throws Exception {
+    EventQueue.invokeAndWait(() -> {
+      swapHomeOnEdt(loaded);
+    });
+  }
+
+  private void swapHomeOnEdt(Home newHome) {
+    HomeFrameController previous = frameController;
+    Window previousWindow = previous == null
+        ? null
+        : SwingUtilities.getWindowAncestor((Component) previous.getView());
+    frameController = createHomeFrameController(newHome);
+    frameController.displayView();
+    if (previousWindow != null) {
+      previousWindow.dispose();
+    }
+    ids.reset();
+    clipboardBytes = null;
+    home = newHome;
   }
 
   /** The home currently displayed (swapped by new_home). */

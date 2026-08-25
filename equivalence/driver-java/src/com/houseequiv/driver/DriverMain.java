@@ -45,6 +45,7 @@ public final class DriverMain {
 
     Dispatcher dispatcher = new Dispatcher(app);
     InteractionCommands.register(dispatcher, app);
+    CaptureCommands.register(dispatcher, app);
     String hello = "{\"type\":\"hello\",\"app\":\"sh3d-driver\",\"version\":"
         + quote(app.version()) + ",\"mode\":\"ui\"}";
     new FramedServer(port, dispatcher, hello).start();

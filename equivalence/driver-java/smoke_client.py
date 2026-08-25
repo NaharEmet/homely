@@ -9,6 +9,7 @@ validates every get_state payload against the frozen
 docs/schema/home-project.schema.json (A3). Exit code 0 = all passed.
 """
 import json
+import os
 import socket
 import sys
 from pathlib import Path
@@ -87,6 +88,8 @@ def main() -> int:
     expect(r_caps.get("ok") is True and {"ping", "new_home", "get_capabilities"} <= cmds,
            f"capabilities lists A1 commands ({len(cmds)} cmds)")
     expect(a2_cmds <= cmds, f"capabilities lists A2 commands ({a2_cmds - cmds} missing)")
+    a4_cmds = {"capture_plan", "capture_3d", "save_home", "open_home"}
+    expect(a4_cmds <= cmds, f"capabilities lists A4 commands ({a4_cmds - cmds} missing)")
 
     r_bad = rpc("definitely_not_a_command")
     expect(r_bad.get("ok") is False and r_bad.get("code") == "UNKNOWN_COMMAND",
@@ -222,6 +225,52 @@ def main() -> int:
     expect(ok(r_new2) and fresh_walls == [], f"new_home resets state ({fresh_walls})")
     expect(caps_fresh.get("canUndo") is False and caps_fresh.get("canRedo") is False,
            f"new_home clears undo history flags ({caps_fresh})")
+
+    # ---- A4: deterministic offscreen captures + .sh3d save/open ----------
+    cap_dir = "/tmp/opencode/a4"
+    os.makedirs(cap_dir, exist_ok=True)
+
+    cap1 = rpc("capture_plan", width=640, height=480, path=f"{cap_dir}/plan-1.png")
+    cap2 = rpc("capture_plan", width=640, height=480, path=f"{cap_dir}/plan-2.png")
+    expect(ok(cap1) and ok(cap2), f"capture_plan round-trips ({cap1.get('error') or cap2.get('error')})")
+    expect(cap1["data"]["sha256"] == cap2["data"]["sha256"],
+           "two identical plan captures are byte-identical")
+
+    cap3d1 = rpc("capture_3d", width=640, height=480, path=f"{cap_dir}/view3d-1.png")
+    cap3d2 = rpc("capture_3d", width=640, height=480, path=f"{cap_dir}/view3d-2.png")
+    expect(ok(cap3d1) and ok(cap3d2),
+           f"capture_3d round-trips ({cap3d1.get('error') or cap3d2.get('error')})")
+    expect(cap3d1["data"]["sha256"] == cap3d2["data"]["sha256"],
+           "two identical 3D captures are byte-identical")
+
+    # populate again for the save/open round-trip
+    rpc("set_magnetism", enabled=False)
+    rpc("select_tool", tool="wall_creation")
+    for x, y in [(100, 100), (300, 100), (300, 300), (100, 300), (100, 100)]:
+        rpc("move_mouse", x=x, y=y)
+        rpc("click", x=x, y=y)
+    rpc("double_click", x=100, y=100)
+    s_before_save = get_state()
+    before_walls = {(round(w["xStart"]), round(w["yStart"]),
+                     round(w["xEnd"]), round(w["yEnd"])) for w in s_before_save["walls"]}
+    expect(len(before_walls) == 4, f"room redrawn for save test ({len(before_walls)})")
+
+    sh3d_path = f"{cap_dir}/a4-room.sh3d"
+    r_save = rpc("save_home", path=sh3d_path)
+    expect(ok(r_save) and r_save["data"]["walls"] == 4, f"save_home ({r_save})")
+
+    rpc("new_home")
+    expect(len(get_state().get("walls", [])) == 0, "home emptied before open_home")
+
+    r_open = rpc("open_home", path=sh3d_path)
+    s_open = get_state()
+    after_walls = {(round(w["xStart"]), round(w["yStart"]),
+                    round(w["xEnd"]), round(w["yEnd"])) for w in s_open.get("walls", [])}
+    open_ids = sorted(w["id"] for w in s_open.get("walls", []))
+    expect(ok(r_open) and r_open.get("data", {}).get("walls") == 4, f"open_home ({r_open})")
+    expect(after_walls == before_walls, "open_home restores identical wall coords")
+    expect(open_ids == ["wall-1", "wall-2", "wall-3", "wall-4"],
+           f"ids re-assigned after open ({open_ids})")
 
     r_err = rpc("select_tool", tool="nonexistent_tool")
     expect(r_err.get("ok") is False and r_err.get("code") == "INTERNAL",
