@@ -43,11 +43,20 @@ export interface Wall {
   height?: number | null
   heightAtEnd?: number | null
   levelRef?: string | null
+  leftSideColor?: number | null
+  rightSideColor?: number | null
+  patternId?: string | null
 }
 
 export interface Room {
   id: string
   points: Array<[number, number]>
+  name?: string | null
+  areaVisible?: boolean
+  floorVisible?: boolean
+  floorColor?: number | null
+  ceilingVisible?: boolean
+  levelRef?: string | null
 }
 
 export interface Furniture {
@@ -60,6 +69,16 @@ export interface Furniture {
   depth: number
   height: number
   elevation: number
+  catalogId?: string | null
+  pitchDeg?: number
+  rollDeg?: number
+  color?: number | null
+  visible?: boolean
+  movable?: boolean
+  doorOrWindow?: boolean
+  /** Up to three [xDeg, yDeg, zDeg] rotation triples (schema modelRotationDeg). */
+  modelRotationDeg?: Array<[number, number, number]>
+  levelRef?: string | null
 }
 
 export interface DimensionLine {
@@ -69,6 +88,9 @@ export interface DimensionLine {
   xEnd: number
   yEnd: number
   offset: number
+  elevationStart?: number
+  elevationEnd?: number
+  levelRef?: string | null
 }
 
 export interface Label {
@@ -76,6 +98,10 @@ export interface Label {
   text: string
   x: number
   y: number
+  angleDeg?: number
+  elevation?: number
+  color?: number | null
+  levelRef?: string | null
 }
 
 export interface CameraState {

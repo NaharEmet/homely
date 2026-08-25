@@ -92,7 +92,8 @@ describe('ws protocol v1 handshake', () => {
       x: 50,
       y: 50,
       z: 170,
-      yawDeg: 315,
+      // SH3D stores 315°; wire export normalizes degrees into (-180,180]
+      yawDeg: -45,
       pitchDeg: 11.25,
       fovDeg: 63,
       lens: 'PINHOLE',
@@ -128,13 +129,23 @@ describe('ws protocol v1 handshake', () => {
     const res = await orch.sendRequest('get_capabilities')
     expect(res).toMatchObject({
       ok: true,
-      data: { commands: ['ping', 'new_home', 'get_state', 'get_capabilities'] },
+      data: {
+        commands: [
+          'ping',
+          'new_home',
+          'get_state',
+          'get_capabilities',
+          'add_furniture',
+          'undo',
+          'redo',
+        ],
+      },
     })
   })
 
   it('rejects unknown commands with a code', async () => {
     await awaitHello()
-    const res = await orch.sendRequest('add_furniture', { catalogId: 'x' })
+    const res = await orch.sendRequest('select_tool', { tool: 'wall' })
     expect(res.ok).toBe(false)
     expect(res.code).toBe('UNKNOWN_COMMAND')
     expect(typeof res.error).toBe('string')
@@ -185,6 +196,61 @@ describe('ws protocol v1 handshake', () => {
     const res = await orch.sendRequest('ping')
     expect(res.ok).toBe(true)
     expect(orch.unexpected).toEqual([])
+  })
+
+  it('add_furniture + undo + redo round-trips with capability flags', async () => {
+    await awaitHello()
+    const added = await orch.sendRequest('add_furniture', {
+      name: 'table',
+      x: 120.123456,
+      y: 80,
+      angleDeg: 45,
+      width: 100,
+      depth: 60,
+      height: 75,
+      elevation: 2.5,
+    })
+    expect(added.ok).toBe(true)
+    const { id } = added.data as { id: string }
+    expect(id).toMatch(/^furniture-/)
+
+    let state = (await orch.sendRequest('get_state')).data as {
+      furniture: Array<{ id: string; x: number }>
+      capabilities: { canUndo: boolean; canRedo: boolean }
+    }
+    expect(state.furniture).toHaveLength(1)
+    expect(state.furniture[0]).toMatchObject({ id, x: 120.123 })
+    expect(state.capabilities).toEqual({ canUndo: true, canRedo: false })
+
+    const undoRes = (await orch.sendRequest('undo')).data as {
+      undone: boolean
+      canUndo: boolean
+      canRedo: boolean
+    }
+    expect(undoRes).toEqual({ undone: true, canUndo: false, canRedo: true })
+
+    const redoRes = (await orch.sendRequest('redo')).data as {
+      redone: boolean
+      canUndo: boolean
+      canRedo: boolean
+    }
+    expect(redoRes).toEqual({ redone: true, canUndo: true, canRedo: false })
+    state = (await orch.sendRequest('get_state')).data as typeof state
+    expect(state.furniture).toHaveLength(1)
+
+    // invalid params surface as INVALID_PARAMS, not INTERNAL
+    await orch
+      .sendRequest('add_furniture', { name: 'x', x: 0, y: 0, angleDeg: 0, width: -1, depth: 1, height: 1 })
+      .then((res) => {
+        expect(res.ok).toBe(false)
+        expect(res.code).toBe('INVALID_PARAMS')
+      })
+
+    // new_home still clears history
+    await orch.sendRequest('new_home')
+    state = (await orch.sendRequest('get_state')).data as typeof state
+    expect(state.capabilities).toEqual({ canUndo: false, canRedo: false })
+    expect(state.furniture).toEqual([])
   })
 })
 
