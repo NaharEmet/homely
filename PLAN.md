@@ -29,7 +29,7 @@ re-explore the SH3D source before reading it.
 | B1 | homely-scaffold | D1 | homely/ | clone-dev | clone-dev | review | 3650f6b build+test+smoke+tauri dev window verified |
 | B2 | homely-core | B1 | homely/src/core | clone-dev | clone-dev | review | 0294efd 44/44 tests, adversarial review 10/10 findings fixed, harness equivalence 22/22+21/21, add_furniture deviation noted in docs/behaviours |
 | B3 | plan-view | B2 | homely/src/plan | clone-dev | clone-dev | claimed | |
-| B4 | view3d | B2 | homely/src/view3d | clone-dev | clone-dev | claimed | |
+| B4 | view3d | B2 | homely/src/view3d | clone-dev | clone-dev | review | 58/58 tests (14 view3d), eslint clean, vite build ok; SH3D-exact cameras (world=(x,h,y), rotY(π−yaw)·RotX(−pitch)), live store sync, set_camera/camera_preset; project-wide tsc/lint still blocked by B3 WIP |
 | B5 | homely-capture | B2 | homely/src/automation | clone-dev | | todo | |
 | C1 | dsl | D1 | equivalence/eq/dsl | harness-dev | harness-dev | review | 19 pytest pass; ruff clean |
 | C2 | orchestrator | C1 | equivalence/eq/adapters | harness-dev | harness-dev | review | mock+ws/tcp server+lockstep runner+ledger; 21 pytest pass; demo writes repo-root results/ (add /results/ to .gitignore?) |
