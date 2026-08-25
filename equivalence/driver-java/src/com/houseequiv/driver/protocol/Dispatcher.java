@@ -21,7 +21,7 @@ import java.util.TreeMap;
 public final class Dispatcher {
 
   @FunctionalInterface
-  interface Handler {
+  public interface Handler {
     JsonObject handle(JsonObject params) throws Exception;
   }
 
@@ -51,6 +51,11 @@ public final class Dispatcher {
       data.add("commands", commands);
       return data;
     });
+  }
+
+  /** Registers an additional command handler; last registration wins. */
+  public void register(String type, Handler handler) {
+    handlers.put(type, handler);
   }
 
   /** Handles one raw JSON line; always returns exactly one response object string. */

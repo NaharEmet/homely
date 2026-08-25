@@ -66,6 +66,41 @@ Runtime JVM constraints learned the hard way:
 - unknown type → `{ok:false,error:...,code:"UNKNOWN_COMMAND"}`
 - malformed line / missing type → `code:"BAD_REQUEST"`; handler exception → `"INTERNAL"`
 
+## Protocol surface (A2 interact)
+
+All coordinates are model cm (floats). UI-touching handlers marshal via EDT.
+
+- `select_tool {tool}` — selection|panning|wall_creation|room_creation|
+  polyline_creation|dimension_line_creation|label_creation (aliases:
+  walls, rooms, polyline, dimension_line, label, pan, select)
+- `press_mouse {x,y,click_count=1,shift=false,duplication=false}` /
+  `move_mouse {x,y}` / `release_mouse {x,y}` — raw PlanController gestures
+- `click {x,y}` — move+press(count 1)+release
+- `double_click {x,y}` — press(count 2)+release ONLY (no move, no count-1
+  press); used to close a wall loop after a click on the start point
+- `key {key}` — escape|delete|backspace (PlanController.escape/deleteSelection)
+- `set_magnetism {enabled}` — UserPreferences.setMagnetismEnabled
+- `undo` / `redo` — HomeController.undo/redo
+- `delete_selection`, `select_all` (PlanController.selectAll — the
+  HomeController variant no-ops without Swing focus), `clear_selection`
+- `copy_selection` / `cut_selection` / `paste` — driver-side clipboard stored
+  as Java-serialized bytes (deep copies, mirroring HomeTransferableList);
+  pasting live references would alias walls and corrupt undo
+- `get_state` — minimal read: `{walls:[{id,x_start,y_start,x_end,y_end,height,
+  height_at_end,thickness}],selection:[ids]}` with driver-assigned ids
+  (wall-N, reset per new_home). Full NormalizedHomeState export is A3.
+- `debug_screenshot {path}` — debug-only: paints the live frame to a PNG
+  (not part of the equivalence surface; A4 owns deterministic renders)
+
+### Wall-loop recipe (verified)
+
+`select_tool wall_creation; set_magnetism false;` then for each corner
+move_mouse+click; finish with move_mouse to the start point, `click` (commits
+the last wall), then `double_click` at the start point (joins the loop and
+validates). A double_click WITHOUT the preceding click moves the previous
+wall's end to the start point, producing a diagonal wall instead of the
+closing segment.
+
 ## Verification transcript (A1 DoD)
 
 ```text
@@ -86,10 +121,40 @@ Window visible on DISPLAY=:1 (xwininfo showed
 `"Untitled 2 - Sweet Home 3D" ... com-houseequiv-driver-DriverMain`; the "2"
 confirms new_home swapped in a fresh home and exactly one window remains).
 
+## Verification transcript (A2 DoD)
+
+```text
+$ DISPLAY=:1 ./run.sh 9441 &
+[driver] UI ready, home frame displayed
+[driver] listening on 127.0.0.1:9441
+$ python3 smoke_client.py 9441     # A1 + A2 suites
+...
+PASS 4 walls after scripted chain (4 walls)
+PASS wall coords match clicked corners ([(100, 100, 300, 100), (100, 300, 100, 100),
+      (300, 100, 300, 300), (300, 300, 100, 300)])
+PASS default wall height 250cm ({250.0})
+PASS driver-assigned wall ids (['wall-1', 'wall-2', 'wall-3', 'wall-4'])
+PASS undo removes walls (0 left)
+PASS redo restores walls (4)
+PASS select_all selects walls (5 selected)
+PASS clear_selection empties selection ([])
+PASS copy+paste duplicates walls (8 walls)
+PASS key delete clears selected walls ([])
+PASS escape ends chain without stray wall (0 walls)
+PASS new_home resets state ([])
+smoke OK                            # 26/26 assertions
+```
+
+Screenshot proof: `debug_screenshot` of the live frame after the scripted
+4-wall room shows the closed 2m x 2m square in the plan view
+(/tmp/opencode/a2-room3.png; window title "Untitled 2 - Sweet Home 3D").
+
 ## Notes / limitations
 
 - GPL: this code links the prebuilt SH3D jars and must stay inside
   `equivalence/driver-java/`; nothing here may leak into `homely/`.
-- A2 (interact), A3 (state export) will extend Dispatcher with more commands;
-  `get_capabilities` picks them up automatically.
+- A3 (full state export) will replace `get_state`'s minimal walls read;
+  `get_capabilities` picks new commands up automatically.
 - All UI-touching handlers marshal via `EventQueue.invokeAndWait`.
+- The 3D pane prints black in `debug_screenshot` (JOGL heavyweight canvas
+  does not render through printAll); the plan view renders fully.

@@ -24,6 +24,10 @@ import com.eteks.sweethome3d.model.Home;
 public final class Sh3dApplication extends SweetHome3D {
 
   private volatile HomeFrameController frameController;
+  private volatile Home home;
+  private final IdAssigner ids = new IdAssigner();
+  /** Deep-copied snapshot of copied/cut items (Java-serialized), like SH3D's own HomeTransferableList. */
+  private volatile byte[] clipboardBytes;
 
   public Sh3dApplication() {
     super();
@@ -32,7 +36,16 @@ public final class Sh3dApplication extends SweetHome3D {
 
   public void bootOnEdt() throws Exception {
     EventQueue.invokeAndWait(() -> {
-      Home home = createHome();
+      // Protocol coordinates are cm; force metric so SH3D defaults don't
+      // depend on the machine locale (en_US would default to inch units =>
+      // 243.84cm = 8ft new-wall height).
+      getUserPreferences().setUnit(com.eteks.sweethome3d.model.LengthUnit.CENTIMETER);
+      // SH3D metric defaults (docs/architecture-map.md); set explicitly
+      // because FileUserPreferences seeds them from locale, not from unit.
+      getUserPreferences().setNewWallHeight(250f);
+      getUserPreferences().setNewWallThickness(7f);
+      ids.reset();
+      home = createHome();
       frameController = createHomeFrameController(home);
       frameController.displayView();
     });
@@ -50,11 +63,81 @@ public final class Sh3dApplication extends SweetHome3D {
       if (previousWindow != null) {
         previousWindow.dispose();
       }
+      ids.reset();
+      home = freshHome;
     });
+  }
+
+  /** The home currently displayed (swapped by new_home). */
+  public Home home() {
+    return home;
+  }
+
+  /** Driver-assigned stable ids for model objects, reset with each fresh home. */
+  public IdAssigner ids() {
+    return ids;
+  }
+
+  /**
+   * Driver-side clipboard for copy/cut/paste, stored as serialized bytes so
+   * paste always operates on DEEP COPIES (never live references to walls
+   * still present in the home — that aliasing corrupted undo semantics).
+   * Intentionally NOT the system X11 clipboard: HomePane's transfer handler
+   * never attaches in our boot path, and a JVM-local buffer keeps runs
+   * deterministic in CI.
+   */
+  public byte[] clipboardBytes() {
+    return clipboardBytes;
+  }
+
+  public void setClipboardBytes(byte[] bytes) {
+    this.clipboardBytes = bytes;
+  }
+
+  /**
+   * Runs task on the EDT and returns its result, rethrowing any exception.
+   * If already on the EDT runs directly.
+   */
+  public <T> T callOnEdt(java.util.concurrent.Callable<T> task) {
+    if (EventQueue.isDispatchThread()) {
+      try {
+        return task.call();
+      } catch (Exception e) {
+        throw new RuntimeException(e.getMessage(), e);
+      }
+    }
+    final Object[] result = new Object[1];
+    final Exception[] failure = new Exception[1];
+    try {
+      EventQueue.invokeAndWait(() -> {
+        try {
+          result[0] = task.call();
+        } catch (Exception e) {
+          failure[0] = e;
+        }
+      });
+    } catch (Exception e) {
+      throw new RuntimeException(e.getMessage(), e);
+    }
+    if (failure[0] != null) {
+      throw new RuntimeException(
+          failure[0].getMessage() == null
+              ? failure[0].getClass().getSimpleName()
+              : failure[0].getMessage(),
+          failure[0]);
+    }
+    @SuppressWarnings("unchecked")
+    T typed = (T) result[0];
+    return typed;
   }
 
   public boolean isUiReady() {
     return frameController != null;
+  }
+
+  /** The frame controller of the currently displayed window (null before boot). */
+  public HomeFrameController frameController() {
+    return frameController;
   }
 
   public String version() {

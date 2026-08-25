@@ -44,6 +44,7 @@ public final class DriverMain {
     System.out.println("[driver] UI ready, home frame displayed");
 
     Dispatcher dispatcher = new Dispatcher(app);
+    InteractionCommands.register(dispatcher, app);
     String hello = "{\"type\":\"hello\",\"app\":\"sh3d-driver\",\"version\":"
         + quote(app.version()) + ",\"mode\":\"ui\"}";
     new FramedServer(port, dispatcher, hello).start();
