@@ -25,7 +25,7 @@ re-explore the SH3D source before reading it.
 | A1 | driver-boot | D1 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 9/9 PASS; see ticket README |
 | A2 | driver-interact | A1 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 26/26 PASS; 4-wall room + undo/redo/copy/paste verified; screenshot via debug_screenshot |
 | A3 | driver-state | A2 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 46/46 PASS; full schema export validated 11x jsonschema; steward down -> lifecycle backfill pending |
-| A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | driver-dev | claimed | steward down; git-board claim only |
+| A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 63/63 PASS; plan+3d captures byte-identical; save/open round-trip stable |
 | B1 | homely-scaffold | D1 | homely/ | clone-dev | clone-dev | review | 3650f6b build+test+smoke+tauri dev window verified |
 | B2 | homely-core | B1 | homely/src/core | clone-dev | clone-dev | review | ba632f1 37/37 tests, ajv empty+populated valid, undo/redo round-trip byte-identical |
 | B3 | plan-view | B2 | homely/src/plan | clone-dev | | todo | |
