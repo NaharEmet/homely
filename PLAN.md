@@ -27,7 +27,7 @@ re-explore the SH3D source before reading it.
 | A3 | driver-state | A2 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 46/46 PASS; full schema export validated 11x jsonschema; steward lifecycle backfilled OK |
 | A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 63/63 PASS; plan+3d captures byte-identical; save/open round-trip stable |
 | B1 | homely-scaffold | D1 | homely/ | clone-dev | clone-dev | review | 3650f6b build+test+smoke+tauri dev window verified |
-| B2 | homely-core | B1 | homely/src/core | clone-dev | clone-dev | review | ba632f1 37/37 tests, ajv empty+populated valid, undo/redo round-trip byte-identical |
+| B2 | homely-core | B1 | homely/src/core | clone-dev | clone-dev | review | 0294efd 44/44 tests, adversarial review 10/10 findings fixed, harness equivalence 22/22+21/21, add_furniture deviation noted in docs/behaviours |
 | B3 | plan-view | B2 | homely/src/plan | clone-dev | | todo | |
 | B4 | view3d | B2 | homely/src/view3d | clone-dev | | todo | |
 | B5 | homely-capture | B2 | homely/src/automation | clone-dev | | todo | |
