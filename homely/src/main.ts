@@ -8,6 +8,7 @@ import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 
 import { View3D } from './view3d'
+import { PropertiesPanel } from './ui/properties-panel'
 
 // ── DOM shell ───────────────────────────────────────────────────────────────
 
@@ -533,6 +534,7 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') key = 'escape'
   else if (event.key === 'Delete') key = 'delete'
   else if (event.key === 'Backspace') key = 'backspace'
+  else if (event.key === ']') { propsPanel.toggle(); return }
   if (key === null) return
   event.preventDefault()
   engine.key(key)
@@ -593,6 +595,10 @@ requestAnimationFrame(frame)
 
 // 3D view — creates its own renderer inside #view3d
 new View3D(store, { container: root.querySelector<HTMLDivElement>('#view3d')! })
+
+// Properties panel — right sidebar
+const mainArea = root.querySelector<HTMLDivElement>('#main-area')!
+const propsPanel = new PropertiesPanel(store, mainArea)
 
 // ── Automation ──────────────────────────────────────────────────────────────
 

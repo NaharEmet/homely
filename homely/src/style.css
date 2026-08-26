@@ -405,3 +405,105 @@ body {
 #main-area:has(#view3d-panel.hidden) #divider {
   display: none;
 }
+
+/* ── Properties panel ──────────────────────────────────────────────────────── */
+
+#properties-panel.properties-panel {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  font-size: 12px;
+}
+
+#properties-panel.properties-panel.collapsed {
+  display: none;
+}
+
+.prop-header {
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prop-body {
+  padding: 2px 0;
+}
+
+.prop-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 10px;
+  gap: 6px;
+}
+
+.prop-label {
+  width: 70px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.prop-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 11.5px;
+  padding: 2px 4px;
+  font-family: inherit;
+}
+
+.prop-input:focus {
+  outline: 1px solid var(--active-tool-bg, #4d94ff);
+}
+
+.prop-input[readonly] {
+  opacity: 0.6;
+  cursor: default;
+  border-color: transparent;
+  background: transparent;
+}
+
+.prop-color {
+  width: 28px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  background: none;
+}
+
+.prop-group {
+  padding: 2px 0;
+}
+
+.prop-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px 10px 1px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prop-static {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.prop-placeholder {
+  padding: 24px 10px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+#main-area:has(.properties-panel:not(.collapsed)) {
+  /* ensure panel is visible alongside plan/3d */
+}
