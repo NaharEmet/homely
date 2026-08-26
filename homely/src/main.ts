@@ -5,73 +5,312 @@ import { HomeStore } from './core/store'
 import { HomeModel } from './core/model'
 import { HomelyCommandHandler } from './automation/homely-handler'
 import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
-import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext } from './plan/renderer'
+import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 import { View3D } from './view3d'
 
+// ── DOM shell ───────────────────────────────────────────────────────────────
+
 const root = document.querySelector<HTMLDivElement>('#root')!
+
 root.innerHTML = `
-  <main>
-    <h1>Homely</h1>
-    <p id="status">automation: idle</p>
-    <div id="toolbar">
-      <button data-tool="selection" class="active">Select</button>
-      <button data-tool="wall">Wall</button>
-      <label><input id="magnetism" type="checkbox" checked /> magnetism</label>
+  <div id="menu-bar"></div>
+  <div id="toolbar"></div>
+  <div id="main-area">
+    <div id="plan-panel" class="panel">
+      <canvas id="plan-canvas"></canvas>
     </div>
-    <canvas id="plan-canvas"></canvas>
-    <div id="view3d"></div>
-  </main>
+    <div id="divider"></div>
+    <div id="view3d-panel" class="panel">
+      <div id="view3d"></div>
+    </div>
+  </div>
+  <div id="status-bar">
+    <span id="status-cursor">x: 0  y: 0</span>
+    <span id="status-tool">selection</span>
+    <span id="status-zoom">zoom: 100%</span>
+    <span id="status-automation">automation: idle</span>
+  </div>
 `
-const statusEl = root.querySelector<HTMLParagraphElement>('#status')!
-const canvas = root.querySelector<HTMLCanvasElement>('#plan-canvas')!
+
+const menuBar = root.querySelector<HTMLDivElement>('#menu-bar')!
 const toolbar = root.querySelector<HTMLDivElement>('#toolbar')!
-const magnetismBox = root.querySelector<HTMLInputElement>('#magnetism')!
+const planPanel = root.querySelector<HTMLDivElement>('#plan-panel')!
+const view3dPanel = root.querySelector<HTMLDivElement>('#view3d-panel')!
+const divider = root.querySelector<HTMLDivElement>('#divider')!
+const canvas = root.querySelector<HTMLCanvasElement>('#plan-canvas')!
+const statusCursor = root.querySelector<HTMLSpanElement>('#status-cursor')!
+const statusTool = root.querySelector<HTMLSpanElement>('#status-tool')!
+const statusZoom = root.querySelector<HTMLSpanElement>('#status-zoom')!
+const statusAutomation = root.querySelector<HTMLSpanElement>('#status-automation')!
 const ctx = canvas.getContext('2d')
 
-function setStatus(text: string): void {
-  statusEl.textContent = text
-}
+// ── Store + engine ──────────────────────────────────────────────────────────
 
-// One store + one plan engine shared by the UI and the automation bridge.
 const store = new HomeStore()
 const engine = new PlanEngine(new HomeModel(store))
 
 let automationText = 'idle'
-let toolText = 'tool: selection'
+let currentView: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 }
+
+// ── Menu bar ────────────────────────────────────────────────────────────────
+
+interface MenuDef {
+  label: string
+  items: Array<{ label: string; shortcut?: string; action?: () => void; disabled?: boolean }>
+}
+
+function buildMenu(menus: MenuDef[]): void {
+  menuBar.innerHTML = ''
+  for (const menu of menus) {
+    const item = document.createElement('div')
+    item.className = 'menu-item'
+
+    const trigger = document.createElement('button')
+    trigger.className = 'menu-trigger'
+    trigger.textContent = menu.label
+
+    const dropdown = document.createElement('div')
+    dropdown.className = 'menu-dropdown'
+
+    for (const entry of menu.items) {
+      if (entry.label === '---') {
+        const sep = document.createElement('div')
+        sep.className = 'menu-separator'
+        dropdown.appendChild(sep)
+        continue
+      }
+      const btn = document.createElement('button')
+      btn.className = 'menu-entry'
+      if (entry.disabled) btn.disabled = true
+      const labelSpan = document.createElement('span')
+      labelSpan.textContent = entry.label
+      btn.appendChild(labelSpan)
+      if (entry.shortcut) {
+        const kbd = document.createElement('span')
+        kbd.className = 'menu-shortcut'
+        kbd.textContent = entry.shortcut
+        btn.appendChild(kbd)
+      }
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        closeAllMenus()
+        entry.action?.()
+      })
+      dropdown.appendChild(btn)
+    }
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const wasOpen = item.classList.contains('open')
+      closeAllMenus()
+      if (!wasOpen) item.classList.add('open')
+    })
+
+    item.appendChild(trigger)
+    item.appendChild(dropdown)
+    menuBar.appendChild(item)
+  }
+}
+
+function closeAllMenus(): void {
+  menuBar.querySelectorAll('.menu-item.open').forEach((el) => el.classList.remove('open'))
+}
+
+document.addEventListener('click', closeAllMenus)
+
+const hasUndo = () => store.canUndo()
+const hasRedo = () => store.canRedo()
+
+function refreshMenus(): void {
+  buildMenu([
+    {
+      label: 'File',
+      items: [
+        { label: 'New', action: () => { store.resetToEmpty(); refreshAll() } },
+        { label: '---' },
+        { label: 'Save', action: () => alert('Save: not implemented yet') },
+        { label: 'Open', action: () => alert('Open: not implemented yet') },
+      ],
+    },
+    {
+      label: 'Edit',
+      items: [
+        { label: 'Undo', shortcut: 'Ctrl+Z', action: () => { store.undo(); refreshAll() }, disabled: !hasUndo() },
+        { label: 'Redo', shortcut: 'Ctrl+Y', action: () => { store.redo(); refreshAll() }, disabled: !hasRedo() },
+        { label: '---' },
+        { label: 'Delete', action: () => { engine.key('delete'); refreshAll() } },
+        { label: 'Select All', action: () => alert('Select All: not implemented yet') },
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        { label: 'Plan View', action: () => setCameraPreset('plan') },
+        { label: '3D View', action: () => setCameraPreset('3d') },
+        { label: 'Split View', action: () => setCameraPreset('split') },
+      ],
+    },
+    {
+      label: 'Help',
+      items: [
+        { label: 'About Homely', action: () => alert('Homely — Sweet Home 3D clone\nTauri + Three.js + TypeScript') },
+      ],
+    },
+  ])
+}
+
+// ── Toolbar ─────────────────────────────────────────────────────────────────
+
+function buildToolbar(): void {
+  toolbar.innerHTML = `
+    <div class="tool-group">
+      <button class="tool-btn" data-tool="selection" title="Selection (V)">Select</button>
+      <button class="tool-btn" data-tool="wall" title="Wall tool (W)">Wall</button>
+      <button class="tool-btn" data-tool="room" title="Room — coming soon" disabled>Room</button>
+      <button class="tool-btn" data-tool="dimensionLine" title="Dimension — coming soon" disabled>Dim</button>
+      <button class="tool-btn" data-tool="label" title="Text — coming soon" disabled>Text</button>
+    </div>
+    <div class="tool-separator"></div>
+    <div class="tool-group">
+      <button class="tool-btn" id="btn-undo" title="Undo (Ctrl+Z)">Undo</button>
+      <button class="tool-btn" id="btn-redo" title="Redo (Ctrl+Y)">Redo</button>
+    </div>
+    <div class="tool-separator"></div>
+    <label><input id="magnetism" type="checkbox" checked /> Mag</label>
+    <div class="toolbar-spacer"></div>
+    <div class="camera-toggle">
+      <button class="tool-btn active" data-preset="split" title="Split view">Split</button>
+      <button class="tool-btn" data-preset="plan" title="Plan only">Plan</button>
+      <button class="tool-btn" data-preset="3d" title="3D only">3D</button>
+    </div>
+    <button class="tool-btn" id="dark-toggle" title="Toggle dark mode">◐</button>
+  `
+
+  for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-tool]')) {
+    btn.addEventListener('click', () => {
+      try { engine.setTool(btn.dataset.tool as PlanTool) } catch { /* ignore */ }
+      refreshToolbar()
+      refreshStatus()
+    })
+  }
+
+  toolbar.querySelector('#btn-undo')!.addEventListener('click', () => { store.undo(); refreshAll() })
+  toolbar.querySelector('#btn-redo')!.addEventListener('click', () => { store.redo(); refreshAll() })
+
+  toolbar.querySelector('#magnetism')!.addEventListener('change', (e) => {
+    engine.setMagnetism((e.target as HTMLInputElement).checked)
+  })
+
+  for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-preset]')) {
+    btn.addEventListener('click', () => setCameraPreset(btn.dataset.preset as string))
+  }
+
+  toolbar.querySelector('#dark-toggle')!.addEventListener('click', toggleDarkMode)
+}
+
+function refreshToolbar(): void {
+  const tool = engine.getTool()
+  for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-tool]')) {
+    btn.classList.toggle('active', btn.dataset.tool === tool)
+  }
+  const magBox = toolbar.querySelector<HTMLInputElement>('#magnetism')
+  if (magBox) magBox.checked = engine.isMagnetismEnabled()
+
+  const undoBtn = toolbar.querySelector<HTMLButtonElement>('#btn-undo')!
+  const redoBtn = toolbar.querySelector<HTMLButtonElement>('#btn-redo')!
+  undoBtn.disabled = !hasUndo()
+  redoBtn.disabled = !hasRedo()
+}
+
+// ── Status bar ──────────────────────────────────────────────────────────────
 
 function refreshStatus(): void {
   const preview = engine.getPreview()
-  const phase = preview.phase === 'drawing' ? ' (drawing…)' : ''
-  setStatus(`automation: ${automationText} · ${toolText}${phase}`)
-}
-
-// --- Toolbar ---------------------------------------------------------------
-
-function syncToolbar(): void {
   const tool = engine.getTool()
-  for (const button of toolbar.querySelectorAll<HTMLButtonElement>('button[data-tool]')) {
-    button.classList.toggle('active', button.dataset.tool === tool)
-  }
-  magnetismBox.checked = engine.isMagnetismEnabled()
-  toolText = `tool: ${tool}`
+  const phase = preview.phase === 'drawing' ? ' (drawing…)' : ''
+  statusTool.textContent = `${tool}${phase}`
+  statusAutomation.textContent = `automation: ${automationText}`
+  statusZoom.textContent = `zoom: ${Math.round(currentView.scale * 100)}%`
 }
 
-for (const button of toolbar.querySelectorAll<HTMLButtonElement>('button[data-tool]')) {
-  button.addEventListener('click', () => {
-    try {
-      engine.setTool(button.dataset.tool as PlanTool)
-    } catch {
-      // Unknown tool buttons are a programming error; ignore defensively.
-    }
-    syncToolbar()
-    refreshStatus()
-  })
+// ── Camera preset ───────────────────────────────────────────────────────────
+
+function setCameraPreset(preset: string): void {
+  planPanel.classList.remove('hidden')
+  view3dPanel.classList.remove('hidden')
+  divider.style.display = ''
+
+  if (preset === 'plan') {
+    view3dPanel.classList.add('hidden')
+    divider.style.display = 'none'
+  } else if (preset === '3d') {
+    planPanel.classList.add('hidden')
+    divider.style.display = 'none'
+  }
+
+  for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-preset]')) {
+    btn.classList.toggle('active', btn.dataset.preset === preset)
+  }
+
+  resizeCanvas()
 }
-magnetismBox.addEventListener('change', () => {
-  engine.setMagnetism(magnetismBox.checked)
+
+// ── Dark mode ───────────────────────────────────────────────────────────────
+
+const DARK_KEY = 'homely-dark-mode'
+
+function applyDarkMode(): void {
+  const stored = localStorage.getItem(DARK_KEY)
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  const dark = stored !== null ? stored === 'true' : prefersDark
+  document.body.classList.toggle('dark', dark)
+}
+
+function toggleDarkMode(): void {
+  const current = document.body.classList.contains('dark')
+  const next = !current
+  localStorage.setItem(DARK_KEY, String(next))
+  document.body.classList.toggle('dark', next)
+}
+
+applyDarkMode()
+
+// ── Draggable divider ───────────────────────────────────────────────────────
+
+let dragging = false
+
+divider.addEventListener('pointerdown', (e) => {
+  dragging = true
+  divider.classList.add('dragging')
+  divider.setPointerCapture(e.pointerId)
+  e.preventDefault()
 })
 
-// --- Canvas input (screen px -> model cm) ----------------------------------
+divider.addEventListener('pointermove', (e) => {
+  if (!dragging) return
+  const mainRect = root.querySelector('#main-area')!.getBoundingClientRect()
+  const isVertical = window.innerWidth >= 800
+
+  if (isVertical) {
+    const pct = ((e.clientX - mainRect.left) / mainRect.width) * 100
+    const clamped = Math.max(15, Math.min(85, pct))
+    planPanel.style.flex = `0 0 ${clamped}%`
+    view3dPanel.style.flex = `0 0 ${100 - clamped}%`
+  } else {
+    const pct = ((e.clientY - mainRect.top) / mainRect.height) * 100
+    const clamped = Math.max(15, Math.min(85, pct))
+    planPanel.style.flex = `0 0 ${clamped}%`
+    view3dPanel.style.flex = `0 0 ${100 - clamped}%`
+  }
+  resizeCanvas()
+})
+
+divider.addEventListener('pointerup', () => {
+  dragging = false
+  divider.classList.remove('dragging')
+})
+
+// ── Canvas input (screen px -> model cm) ────────────────────────────────────
 
 interface PointerState {
   down: boolean
@@ -82,6 +321,7 @@ interface PointerState {
   moved: boolean
   shift: boolean
 }
+
 const pointer: PointerState = {
   down: false,
   startX: 0,
@@ -98,8 +338,7 @@ function eventModelPoint(event: PointerEvent | MouseEvent): { x: number; y: numb
   const scaleY = canvas.height / rect.height
   const px = (event.clientX - rect.left) * scaleX
   const py = (event.clientY - rect.top) * scaleY
-  const view = fitToBounds(store.getHome(), canvas.width, canvas.height)
-  return new ViewMapper(view).toModel(px, py)
+  return new ViewMapper(currentView).toModel(px, py)
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -116,6 +355,15 @@ canvas.addEventListener('pointerdown', (event) => {
 })
 
 canvas.addEventListener('pointermove', (event) => {
+  // Update cursor position always
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / rect.width
+  const scaleY = canvas.height / rect.height
+  const px = (event.clientX - rect.left) * scaleX
+  const py = (event.clientY - rect.top) * scaleY
+  const pt = new ViewMapper(currentView).toModel(px, py)
+  statusCursor.textContent = `x: ${pt.x.toFixed(1)}  y: ${pt.y.toFixed(1)}`
+
   if (!pointer.down) return
   const point = eventModelPoint(event)
   const dxPx = Math.abs(point.x - pointer.startX)
@@ -147,18 +395,32 @@ canvas.addEventListener('pointerup', (event) => {
       altOrMeta: event.altKey || event.metaKey,
     })
   }
-  syncToolbar()
+  refreshToolbar()
   refreshStatus()
 })
 
 canvas.addEventListener('dblclick', (event) => {
   const point = eventModelPoint(event)
   engine.click({ x: point.x, y: point.y, dbl: true, shift: event.shiftKey })
-  syncToolbar()
+  refreshToolbar()
   refreshStatus()
 })
 
 window.addEventListener('keydown', (event) => {
+  // Ctrl+Z / Ctrl+Y for undo/redo
+  if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+    event.preventDefault()
+    store.undo()
+    refreshAll()
+    return
+  }
+  if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.shiftKey && event.key === 'z'))) {
+    event.preventDefault()
+    store.redo()
+    refreshAll()
+    return
+  }
+
   let key: 'escape' | 'delete' | 'backspace' | null = null
   if (event.key === 'Escape') key = 'escape'
   else if (event.key === 'Delete') key = 'delete'
@@ -166,20 +428,20 @@ window.addEventListener('keydown', (event) => {
   if (key === null) return
   event.preventDefault()
   engine.key(key)
-  syncToolbar()
+  refreshToolbar()
   refreshStatus()
 })
 
-// --- Render loop ------------------------------------------------------------
+// ── Render loop ─────────────────────────────────────────────────────────────
 
 function render(): void {
   if (!ctx) return
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   const home = store.getHome()
   const preview: PlanPreview | null = engine.getPreview()
-  const view = fitToBounds(store.getHome(), canvas.width, canvas.height)
+  currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
   const rc = ctx as unknown as PlanRenderingContext
-  drawPlan(home, preview, rc, view)
+  drawPlan(home, preview, rc, currentView)
 }
 
 function frame(): void {
@@ -188,22 +450,33 @@ function frame(): void {
 }
 
 function resizeCanvas(): void {
-  const width = canvas.parentElement?.clientWidth ?? 960
-  canvas.width = Math.max(320, Math.floor(width))
-  canvas.height = 560
+  const w = planPanel.clientWidth
+  const h = planPanel.clientHeight
+  canvas.width = Math.max(320, Math.floor(w))
+  canvas.height = Math.max(200, Math.floor(h))
 }
 
+function refreshAll(): void {
+  refreshMenus()
+  refreshToolbar()
+  refreshStatus()
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+
+refreshMenus()
+buildToolbar()
 resizeCanvas()
-window.addEventListener('resize', resizeCanvas)
-syncToolbar()
+refreshToolbar()
 refreshStatus()
+window.addEventListener('resize', resizeCanvas)
 requestAnimationFrame(frame)
 
-// The 3D view observes the same store.
+// 3D view — creates its own renderer inside #view3d
 new View3D(store, { container: root.querySelector<HTMLDivElement>('#view3d')! })
 
-// Automation wiring: orchestrator port via ?automationPort= (browser/dev seam)
-// or the HOMELY_AUTOMATION_PORT env of the tauri process (launch recipe).
+// ── Automation ──────────────────────────────────────────────────────────────
+
 async function connectAutomation(): Promise<void> {
   const queryPort = automationPortFromSearch(window.location.search)
   let port = queryPort
