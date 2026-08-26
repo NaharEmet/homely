@@ -84,6 +84,12 @@ export interface Furniture {
   doorOrWindow?: boolean
   /** Up to three [xDeg, yDeg, zDeg] rotation triples (schema modelRotationDeg). */
   modelRotationDeg?: Array<[number, number, number]>
+  /**
+   * Optional 3D model asset path, relative to `public/assets/`
+   * (e.g. "models/sofa.glb"). When present the 3D view swaps the colored
+   * box for this loaded model. Absent/empty => colored box (backward compat).
+   */
+  modelPath?: string | null
   levelRef?: string | null
 }
 

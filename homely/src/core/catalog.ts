@@ -28,6 +28,13 @@ export interface CatalogItem {
   model?: string | null
   /** Optional local thumbnail asset path (relative to the bundle root). */
   thumbnail?: string | null
+  /**
+   * Optional 3D model asset path, relative to `public/assets/`
+   * (e.g. "models/sofa.glb"). When present, the 3D view loads this model
+   * instead of a colored box. No catalog items ship a model yet — the field
+   * exists for future model authors. Never fetched over the network.
+   */
+  modelPath?: string | null
   /** Free-text search tags (local only). */
   tags?: string[]
 }

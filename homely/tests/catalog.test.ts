@@ -133,6 +133,25 @@ describe('catalog-service', () => {
       }),
     ).toThrow(/width/)
   })
+
+  it('validateManifest allows an optional modelPath on an item', () => {
+    expect(() =>
+      validateManifest({
+        schemaVersion: 1,
+        items: [
+          {
+            catalogId: 'm',
+            name: 'Modeled',
+            category: 'Living',
+            width: 100,
+            depth: 50,
+            height: 80,
+            modelPath: 'models/sofa.glb',
+          },
+        ],
+      }),
+    ).not.toThrow()
+  })
 })
 
 describe('bundled catalog manifest', () => {

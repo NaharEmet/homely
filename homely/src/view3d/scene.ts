@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import {
   DEFAULT_WALL_HEIGHT_CM,
   type Furniture,
@@ -94,6 +95,62 @@ function roomMesh(room: Room, elevation: number): THREE.Mesh {
   return mesh
 }
 
+/** Shared GLTFLoader instance (lazy so the import cost is paid only when used). */
+let sharedModelLoader: GLTFLoader | null = null
+
+function modelLoader(): GLTFLoader {
+  if (!sharedModelLoader) sharedModelLoader = new GLTFLoader()
+  return sharedModelLoader
+}
+
+/**
+ * Scale + center a loaded model to fit the furniture's width/height/depth,
+ * leaving its origin at the box center (which the parent mesh already places).
+ */
+function fitModelToBox(model: THREE.Object3D, item: Furniture): THREE.Object3D {
+  const box = new THREE.Box3().setFromObject(model)
+  const size = box.getSize(new THREE.Vector3())
+  if (size.x <= 0 || size.y <= 0 || size.z <= 0) return model
+  const scale = new THREE.Vector3(
+    item.width / size.x,
+    item.height / size.y,
+    item.depth / size.z,
+  )
+  model.scale.copy(scale)
+  const center = box.getCenter(new THREE.Vector3()).multiply(scale)
+  model.position.sub(center)
+  return model
+}
+
+/**
+ * Async: load the GLTF at modelPath and swap it in. On any failure (missing
+ * file, parse error, unsupported environment) the colored box is kept. The
+ * model is fetched from the local bundle (`assets/<modelPath>`) — never the
+ * network — so there is no runtime dependency on an external host.
+ */
+function swapInModel(mesh: THREE.Mesh, item: Furniture, fallback: THREE.BufferGeometry): void {
+  const loader = modelLoader()
+  const url = `assets/${item.modelPath}`
+  try {
+    loader.load(
+      url,
+      (gltf) => {
+        const model = fitModelToBox(gltf.scene, item)
+        mesh.geometry.dispose()
+        mesh.geometry = new THREE.BoxGeometry(0, 0, 0)
+        mesh.add(model)
+      },
+      undefined,
+      () => {
+        // Load failed: keep the colored box (fallback geometry untouched).
+        void fallback
+      },
+    )
+  } catch {
+    // Unsupported environment or synchronous failure: keep the box.
+  }
+}
+
 function furnitureMesh(item: Furniture, elevation: number): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(item.width, item.height, item.depth)
   const material = new THREE.MeshStandardMaterial({
@@ -107,6 +164,7 @@ function furnitureMesh(item: Furniture, elevation: number): THREE.Mesh {
   mesh.rotation.y = THREE.MathUtils.degToRad(item.angleDeg)
   mesh.castShadow = true
   mesh.receiveShadow = true
+  if (item.modelPath) swapInModel(mesh, item, geometry)
   return mesh
 }
 

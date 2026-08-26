@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { describe, expect, it, vi } from 'vitest'
 import { HomelyCommandHandler } from '../src/automation/homely-handler'
 import { HomeModel, ModelError } from '../src/core/model'
@@ -149,6 +150,96 @@ describe('buildScene', () => {
     expect(table.position.y).toBeCloseTo(25 + 37.5)
     expect(table.position.z).toBeCloseTo(100)
     expect(table.rotation.y).toBeCloseTo(rad(90))
+  })
+
+  it('renders a colored box when furniture has no modelPath (backward compat)', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.furniture.push({
+        id: 'f-box',
+        name: 'plain',
+        x: 0,
+        y: 0,
+        angleDeg: 0,
+        width: 80,
+        depth: 40,
+        height: 75,
+        elevation: 0,
+        visible: true,
+      })
+    })
+    const mesh = meshChild(buildScene(store.getHome()), 'furniture:f-box')
+    expect(mesh.geometry).toBeInstanceOf(THREE.BoxGeometry)
+  })
+
+  it('renders a box mesh for furniture with modelPath, falling back in test env', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.furniture.push({
+        id: 'f-model',
+        name: 'modeled',
+        x: 0,
+        y: 0,
+        angleDeg: 0,
+        width: 80,
+        depth: 40,
+        height: 75,
+        elevation: 0,
+        visible: true,
+        modelPath: 'models/sofa.glb',
+      })
+    })
+    // Synchronous return is the colored box; GLTF load is async and falls back
+    // to the box when no model asset is available (as in the test env).
+    const mesh = meshChild(buildScene(store.getHome()), 'furniture:f-model')
+    expect(mesh.geometry).toBeInstanceOf(THREE.BoxGeometry)
+  })
+
+  it('triggers GLTFLoader.load only when modelPath is set', () => {
+    const spy = vi
+      .spyOn(GLTFLoader.prototype, 'load')
+      .mockImplementation(() => undefined as unknown as void)
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.furniture.push({
+        id: 'f-model2',
+        name: 'm',
+        x: 0,
+        y: 0,
+        angleDeg: 0,
+        width: 10,
+        depth: 10,
+        height: 10,
+        elevation: 0,
+        visible: true,
+        modelPath: 'models/sofa.glb',
+      })
+    })
+    buildScene(store.getHome())
+    expect(spy).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
+
+    const spy2 = vi
+      .spyOn(GLTFLoader.prototype, 'load')
+      .mockImplementation(() => undefined as unknown as void)
+    const store2 = new HomeStore()
+    store2.apply((draft) => {
+      draft.furniture.push({
+        id: 'f-nomodel',
+        name: 'n',
+        x: 0,
+        y: 0,
+        angleDeg: 0,
+        width: 10,
+        depth: 10,
+        height: 10,
+        elevation: 0,
+        visible: true,
+      })
+    })
+    buildScene(store2.getHome())
+    expect(spy2).not.toHaveBeenCalled()
+    spy2.mockRestore()
   })
 
   it('applies environment colors and wallsAlpha transparency', () => {
