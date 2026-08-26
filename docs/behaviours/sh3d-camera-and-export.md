@@ -66,7 +66,9 @@ From InteractionCommands.java (driver export path):
 - Coordinates and fovDeg (`x`, `y`, `z`, `fovDeg`, wall endpoints, level
   elevation etc.): `round3` = BigDecimal HALF_EVEN, scale 3.
 - Angles (`yawDeg`, `pitchDeg`): `toDeg()` at :454 — `deg % 360` then wrapped
-  into **(-180, 180]**, then round3. Yaw π exports as **-180.0** (not 180.0).
+  into **[-180, 180)**, then round3. Yaw π exports as **-180.0** (not 180.0) —
+  confirmed empirically by the driver golden (corrects the earlier (-180,180]
+  note; the boundary case is pinned by create_room.expected-state.json).
 - Camera ids come from IdAssigner: top camera id `'camera-top-1'`,
   observer id `'camera-observer-1'`. Homely export must emit these stable ids.
 
@@ -85,12 +87,14 @@ Compass: SH3D maps `TimeZone.getDefault().getID()` → geographic coordinates vi
 ~603-entry table in Compass.java (`initGeographicPoint()` at :418; MaxMind-derived
 `GeographicPoint(lat, lon)` in degrees, stored as radians via
 `(float)Math.toRadians(...)`). Fallback for an unknown zone id: the `"Etc/GMT"`
-entry = Greenwich = (0.0, 0.0). The build machine's `/etc/localtime` symlinks to
+entry = **Greenwich Observatory = (51.466667, 0.0) degrees** (Compass.java:673 —
+`"Etc/GMT"`, `"Etc/GMT+0"` and `"GMT"` all map to greenwich; NOT (0,0) as an
+earlier draft claimed). The build machine's `/etc/localtime` symlinks to
 **Asia/Thimphu** → latRad 0.48 / lonRad 1.564 (= 27.4833333°, 89.6°, round3'd).
 Homely must read the same OS zone via
 `Intl.DateTimeFormat().resolvedOptions().timeZone`, port the full table
 (Asia/Kolkata → (22.569722, 88.369722), Asia/Thimphu → (27.4833333, 89.6),
-UTC/Greenwich/Etc/GMT → (0,0)), and use the same Etc/GMT fallback.
+UTC/Greenwich/Etc/GMT → (51.466667, 0)), and use the same Etc/GMT fallback.
 
 ## 4. Comparator normalization (C8)
 
