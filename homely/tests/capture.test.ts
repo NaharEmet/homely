@@ -23,6 +23,8 @@ class RecordingPlanContext implements PlanRenderingContext {
   strokeStyle = ''
   fillStyle = ''
   font = ''
+  textAlign: CanvasTextAlign = 'start'
+  textBaseline: CanvasTextBaseline = 'alphabetic'
 
   private set(prop: string, value: unknown): void {
     this.ops.push(['set', prop, value])
@@ -51,6 +53,9 @@ class RecordingPlanContext implements PlanRenderingContext {
   }
   fillText(text: string, x: number, y: number): void {
     this.ops.push(['fillText', text, x, y])
+  }
+  strokeRect(x: number, y: number, w: number, h: number): void {
+    this.ops.push(['strokeRect', x, y, w, h])
   }
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void {
     this.ops.push(['arc', x, y, radius, startAngle, endAngle])

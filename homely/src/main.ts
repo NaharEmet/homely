@@ -6,6 +6,7 @@ import { HomeModel } from './core/model'
 import { HomelyCommandHandler } from './automation/homely-handler'
 import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
+
 import { View3D } from './view3d'
 
 // ── DOM shell ───────────────────────────────────────────────────────────────
@@ -51,6 +52,13 @@ const engine = new PlanEngine(new HomeModel(store))
 
 let automationText = 'idle'
 let currentView: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 }
+let spaceHeld = false
+let isPanning = false
+let panLastX = 0
+let panLastY = 0
+
+const ZOOM_MIN = 0.1
+const ZOOM_MAX = 10.0
 
 // ── Menu bar ────────────────────────────────────────────────────────────────
 
@@ -178,6 +186,8 @@ function buildToolbar(): void {
     <div class="tool-separator"></div>
     <label><input id="magnetism" type="checkbox" checked /> Mag</label>
     <div class="toolbar-spacer"></div>
+    <button class="tool-btn" id="btn-fit" title="Zoom to fit (double-click middle)">Fit</button>
+    <div class="tool-separator"></div>
     <div class="camera-toggle">
       <button class="tool-btn active" data-preset="split" title="Split view">Split</button>
       <button class="tool-btn" data-preset="plan" title="Plan only">Plan</button>
@@ -199,6 +209,12 @@ function buildToolbar(): void {
 
   toolbar.querySelector('#magnetism')!.addEventListener('change', (e) => {
     engine.setMagnetism((e.target as HTMLInputElement).checked)
+  })
+
+  toolbar.querySelector('#btn-fit')!.addEventListener('click', () => {
+    userHasZoomed = false
+    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+    refreshStatus()
   })
 
   for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-preset]')) {
@@ -320,6 +336,7 @@ interface PointerState {
   lastY: number
   moved: boolean
   shift: boolean
+  button: number
 }
 
 const pointer: PointerState = {
@@ -330,6 +347,7 @@ const pointer: PointerState = {
   lastY: 0,
   moved: false,
   shift: false,
+  button: 0,
 }
 
 function eventModelPoint(event: PointerEvent | MouseEvent): { x: number; y: number } {
@@ -341,13 +359,45 @@ function eventModelPoint(event: PointerEvent | MouseEvent): { x: number; y: numb
   return new ViewMapper(currentView).toModel(px, py)
 }
 
+function canvasPixelCoords(event: PointerEvent | MouseEvent): { px: number; py: number } {
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / rect.width
+  const scaleY = canvas.height / rect.height
+  return {
+    px: (event.clientX - rect.left) * scaleX,
+    py: (event.clientY - rect.top) * scaleY,
+  }
+}
+
+// Middle-click pan
 canvas.addEventListener('pointerdown', (event) => {
-  if (!ctx || event.button !== 0) return
+  if (event.button === 1) {
+    isPanning = true
+    userHasZoomed = true
+    panLastX = event.clientX
+    panLastY = event.clientY
+    canvas.setPointerCapture(event.pointerId)
+    event.preventDefault()
+    return
+  }
+
+  // Space + left-click: start pan
+  if (event.button === 0 && spaceHeld) {
+    isPanning = true
+    userHasZoomed = true
+    panLastX = event.clientX
+    panLastY = event.clientY
+    canvas.setPointerCapture(event.pointerId)
+    return
+  }
+
+  if (event.button !== 0) return
   canvas.setPointerCapture(event.pointerId)
   const point = eventModelPoint(event)
   pointer.down = true
   pointer.moved = false
   pointer.shift = event.shiftKey
+  pointer.button = event.button
   pointer.startX = point.x
   pointer.startY = point.y
   pointer.lastX = point.x
@@ -355,14 +405,22 @@ canvas.addEventListener('pointerdown', (event) => {
 })
 
 canvas.addEventListener('pointermove', (event) => {
-  // Update cursor position always
-  const rect = canvas.getBoundingClientRect()
-  const scaleX = canvas.width / rect.width
-  const scaleY = canvas.height / rect.height
-  const px = (event.clientX - rect.left) * scaleX
-  const py = (event.clientY - rect.top) * scaleY
-  const pt = new ViewMapper(currentView).toModel(px, py)
+  const coords = canvasPixelCoords(event)
+  const pt = new ViewMapper(currentView).toModel(coords.px, coords.py)
   statusCursor.textContent = `x: ${pt.x.toFixed(1)}  y: ${pt.y.toFixed(1)}`
+
+  if (isPanning) {
+    const dx = event.clientX - panLastX
+    const dy = event.clientY - panLastY
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    currentView.offsetX += dx * scaleX
+    currentView.offsetY += dy * scaleY
+    panLastX = event.clientX
+    panLastY = event.clientY
+    return
+  }
 
   if (!pointer.down) return
   const point = eventModelPoint(event)
@@ -374,6 +432,10 @@ canvas.addEventListener('pointermove', (event) => {
 })
 
 canvas.addEventListener('pointerup', (event) => {
+  if (isPanning) {
+    isPanning = false
+    return
+  }
   if (!pointer.down) return
   pointer.down = false
   const point = eventModelPoint(event)
@@ -400,14 +462,37 @@ canvas.addEventListener('pointerup', (event) => {
 })
 
 canvas.addEventListener('dblclick', (event) => {
+  if (event.button === 1) {
+    userHasZoomed = false
+    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+    refreshStatus()
+    return
+  }
   const point = eventModelPoint(event)
   engine.click({ x: point.x, y: point.y, dbl: true, shift: event.shiftKey })
   refreshToolbar()
   refreshStatus()
 })
 
+// Scroll wheel zoom centered on cursor
+canvas.addEventListener('wheel', (event) => {
+  event.preventDefault()
+  userHasZoomed = true
+  const { px, py } = canvasPixelCoords(event)
+  const modelBefore = new ViewMapper(currentView).toModel(px, py)
+
+  const factor = event.deltaY > 0 ? 0.9 : 1.1
+  const newScale = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, currentView.scale * factor))
+  currentView.scale = newScale
+
+  // Adjust offset so the model point under the cursor stays fixed.
+  currentView.offsetX = px - modelBefore.x * currentView.scale
+  currentView.offsetY = py - modelBefore.y * currentView.scale
+
+  refreshStatus()
+}, { passive: false })
+
 window.addEventListener('keydown', (event) => {
-  // Ctrl+Z / Ctrl+Y for undo/redo
   if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
     event.preventDefault()
     store.undo()
@@ -418,6 +503,13 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault()
     store.redo()
     refreshAll()
+    return
+  }
+
+  if (event.key === ' ' && !event.repeat) {
+    event.preventDefault()
+    spaceHeld = true
+    canvas.style.cursor = 'grab'
     return
   }
 
@@ -432,6 +524,13 @@ window.addEventListener('keydown', (event) => {
   refreshStatus()
 })
 
+window.addEventListener('keyup', (event) => {
+  if (event.key === ' ') {
+    spaceHeld = false
+    canvas.style.cursor = ''
+  }
+})
+
 // ── Render loop ─────────────────────────────────────────────────────────────
 
 function render(): void {
@@ -439,10 +538,14 @@ function render(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   const home = store.getHome()
   const preview: PlanPreview | null = engine.getPreview()
-  currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+  if (!userHasZoomed) {
+    currentView = fitToBounds(home, canvas.width, canvas.height)
+  }
   const rc = ctx as unknown as PlanRenderingContext
-  drawPlan(home, preview, rc, currentView)
+  drawPlan(home, preview, rc, currentView, canvas.width, canvas.height)
 }
+
+let userHasZoomed = false
 
 function frame(): void {
   render()

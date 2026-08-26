@@ -1,4 +1,5 @@
 import type { NormalizedHomeState } from '../core/home'
+import { wallOutlinePoints } from '../core/top-camera-follower'
 import type { PlanPreview } from './engine'
 
 export interface ViewTransform {
@@ -17,26 +18,44 @@ export interface PlanRenderingContext {
   fill(): void
   fillRect(x: number, y: number, w: number, h: number): void
   fillText(text: string, x: number, y: number): void
+  strokeRect(x: number, y: number, w: number, h: number): void
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void
   lineWidth: number
   strokeStyle: string
   fillStyle: string
   font: string
+  textAlign: CanvasTextAlign
+  textBaseline: CanvasTextBaseline
   setLineDash(dashes: Array<number>): void
 }
 
 const WALL_COLOR = '#5a5a5a'
 const SELECTION_COLOR = '#1a66d6'
-const ROOM_FILL = 'rgba(120, 170, 235, 0.25)'
+const ROOM_FILL = 'rgba(170, 200, 235, 0.3)'
 const DIMENSION_COLOR = '#8a6d1a'
 const LABEL_COLOR = '#333333'
 const PREVIEW_COLOR = '#999999'
 const FURNITURE_FILL = 'rgba(160, 160, 90, 0.5)'
 
+const MINOR_GRID_COLOR = '#e8e8e8'
+const MAJOR_GRID_COLOR = '#d0d0d0'
+
 /** Schema colors are 0xRRGGBB ints; CSS wants strings. */
 function cssColor(color: number | null | undefined, fallback: string): string {
   if (color === null || color === undefined) return fallback
   return `#${(color >>> 0).toString(16).padStart(6, '0')}`
+}
+
+/** Shoelace formula — returns area in cm². */
+function shoelaceArea(points: Array<[number, number]>): number {
+  let area = 0
+  const n = points.length
+  for (let i = 0; i < n; i++) {
+    const p1 = points[i]!
+    const p2 = points[(i + 1) % n]!
+    area += p1[0] * p2[1] - p2[0] * p1[1]
+  }
+  return Math.abs(area) / 2
 }
 
 export function fitToBounds(
@@ -99,51 +118,138 @@ export class ViewMapper {
   }
 }
 
+function drawGrid(ctx: PlanRenderingContext, view: ViewTransform, width: number, height: number): void {
+  const mapper = new ViewMapper(view)
+  const topLeft = mapper.toModel(0, 0)
+  const bottomRight = mapper.toModel(width, height)
+  const minX = Math.min(topLeft.x, bottomRight.x)
+  const maxX = Math.max(topLeft.x, bottomRight.x)
+  const minY = Math.min(topLeft.y, bottomRight.y)
+  const maxY = Math.max(topLeft.y, bottomRight.y)
+
+  const minorStep = 10
+  const majorStep = 100
+
+  const startMinorX = Math.floor(minX / minorStep) * minorStep
+  const startMinorY = Math.floor(minY / minorStep) * minorStep
+
+  ctx.beginPath()
+  for (let x = startMinorX; x <= maxX; x += minorStep) {
+    if (x % majorStep === 0) continue
+    const px = mapper.sx(x)
+    ctx.moveTo(px, 0)
+    ctx.lineTo(px, height)
+  }
+  for (let y = startMinorY; y <= maxY; y += minorStep) {
+    if (y % majorStep === 0) continue
+    const py = mapper.sy(y)
+    ctx.moveTo(0, py)
+    ctx.lineTo(width, py)
+  }
+  ctx.strokeStyle = MINOR_GRID_COLOR
+  ctx.lineWidth = 0.5
+  ctx.stroke()
+
+  const startMajorX = Math.floor(minX / majorStep) * majorStep
+  const startMajorY = Math.floor(minY / majorStep) * majorStep
+
+  ctx.beginPath()
+  for (let x = startMajorX; x <= maxX; x += majorStep) {
+    const px = mapper.sx(x)
+    ctx.moveTo(px, 0)
+    ctx.lineTo(px, height)
+  }
+  for (let y = startMajorY; y <= maxY; y += majorStep) {
+    const py = mapper.sy(y)
+    ctx.moveTo(0, py)
+    ctx.lineTo(width, py)
+  }
+  ctx.strokeStyle = MAJOR_GRID_COLOR
+  ctx.lineWidth = 1
+  ctx.stroke()
+}
+
 export function drawPlan(
   home: NormalizedHomeState,
   preview: PlanPreview | null,
   ctx: PlanRenderingContext,
   view: ViewTransform,
+  canvasWidth?: number,
+  canvasHeight?: number,
 ): void {
   const mapper = new ViewMapper(view)
   const selected = new Set(home.selection)
 
-  // Rooms first (below everything).
+  if (canvasWidth != null && canvasHeight != null) {
+    drawGrid(ctx, view, canvasWidth, canvasHeight)
+  }
+
+  // Rooms (floor fill + area label).
   for (const room of home.rooms) {
-    if (!room.floorVisible && !room.areaVisible) continue
+    if (room.points.length < 3) continue
     ctx.beginPath()
     room.points.forEach(([x, y], index) => {
       if (index === 0) ctx.moveTo(mapper.sx(x), mapper.sy(y))
       else ctx.lineTo(mapper.sx(x), mapper.sy(y))
     })
     ctx.closePath()
-    ctx.fillStyle = cssColor(room.floorColor, ROOM_FILL)
-    ctx.fill()
+
+    const floorFill = cssColor(room.floorColor, ROOM_FILL)
+    if (room.floorVisible !== false) {
+      ctx.fillStyle = floorFill
+      ctx.fill()
+    }
+
     if (selected.has(room.id)) {
       ctx.lineWidth = 2
       ctx.strokeStyle = SELECTION_COLOR
       ctx.stroke()
     }
-    if (room.areaVisible && room.points.length > 0) {
-      const centroidX = room.points.reduce((acc, [x]) => acc + x, 0) / room.points.length
-      const centroidY = room.points.reduce((acc, [, y]) => acc + y, 0) / room.points.length
+
+    const centroidX = room.points.reduce((acc, [x]) => acc + x, 0) / room.points.length
+    const centroidY = room.points.reduce((acc, [, y]) => acc + y, 0) / room.points.length
+    const areaCm2 = shoelaceArea(room.points)
+    const areaM2 = (areaCm2 / 10000).toFixed(2)
+
+    ctx.fillStyle = '#5577aa'
+    ctx.font = '12px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`${areaM2} m²`, mapper.sx(centroidX), mapper.sy(centroidY))
+    ctx.textAlign = 'start'
+    ctx.textBaseline = 'alphabetic'
+
+    if (room.name) {
       ctx.fillStyle = '#5577aa'
-      ctx.font = '12px sans-serif'
-      ctx.fillText('room', mapper.sx(centroidX), mapper.sy(centroidY))
+      ctx.font = '10px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(room.name, mapper.sx(centroidX), mapper.sy(centroidY) - 14)
+      ctx.textAlign = 'start'
+      ctx.textBaseline = 'alphabetic'
     }
   }
 
-  // Walls as thick centerlines.
+  // Walls as filled thick shapes with mitered corners.
   for (const wall of home.walls) {
+    const outline = wallOutlinePoints(wall, home.walls)
+    if (outline.length === 0) continue
     ctx.beginPath()
-    ctx.moveTo(mapper.sx(wall.xStart), mapper.sy(wall.yStart))
-    ctx.lineTo(mapper.sx(wall.xEnd), mapper.sy(wall.yEnd))
-    ctx.lineWidth = Math.max(wall.thickness * view.scale, 1)
-    ctx.strokeStyle = selected.has(wall.id) ? SELECTION_COLOR : WALL_COLOR
+    ctx.moveTo(mapper.sx(outline[0]![0]), mapper.sy(outline[0]![1]))
+    for (let i = 1; i < outline.length; i++) {
+      ctx.lineTo(mapper.sx(outline[i]![0]), mapper.sy(outline[i]![1]))
+    }
+    ctx.closePath()
+    ctx.fillStyle = selected.has(wall.id)
+      ? SELECTION_COLOR
+      : cssColor(wall.leftSideColor, WALL_COLOR)
+    ctx.fill()
+    ctx.strokeStyle = cssColor(wall.rightSideColor, WALL_COLOR)
+    ctx.lineWidth = 0.5
     ctx.stroke()
   }
 
-  // Furniture as rotated rectangles (x/y are the SH3D center point).
+  // Furniture as rotated rectangles.
   for (const f of home.furniture) {
     const angleRad = (f.angleDeg * Math.PI) / 180
     const cos = Math.cos(angleRad)
@@ -172,6 +278,18 @@ export function drawPlan(
       ctx.lineWidth = 2
       ctx.strokeStyle = SELECTION_COLOR
       ctx.stroke()
+
+      // Corner drag handles.
+      const handleSize = 6
+      ctx.fillStyle = SELECTION_COLOR
+      for (const corner of corners) {
+        ctx.fillRect(
+          corner.x - handleSize / 2,
+          corner.y - handleSize / 2,
+          handleSize,
+          handleSize,
+        )
+      }
     }
   }
 
