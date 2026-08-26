@@ -64,6 +64,17 @@ function indexByName(scene: THREE.Scene): Map<string, THREE.Object3D> {
   return byName
 }
 
+/** Get the first Mesh child of a named Group (walls/rooms/furniture are now Groups). */
+function meshChild(scene: THREE.Scene, name: string): THREE.Mesh {
+  const obj = indexByName(scene).get(name)
+  if (!obj) throw new Error(`Object "${name}" not found`)
+  if ((obj as THREE.Mesh).isMesh) return obj as THREE.Mesh
+  let found: THREE.Mesh | undefined
+  obj.traverse((c) => { if (!found && (c as THREE.Mesh).isMesh) found = c as THREE.Mesh })
+  if (!found) throw new Error(`No mesh child in "${name}"`)
+  return found
+}
+
 function countNamed(scene: THREE.Scene, prefix: string): number {
   let count = 0
   scene.traverse((object) => {
@@ -86,7 +97,7 @@ describe('buildScene', () => {
     expect(byName.has('wall:w-w')).toBe(true)
 
     // North segment: plan (0,0)->(400,0), default height fallback.
-    const north = byName.get('wall:w-n') as THREE.Mesh
+    const north = meshChild(scene, 'wall:w-n')
     expect(north.geometry).toBeInstanceOf(THREE.BoxGeometry)
     const northBox = north.geometry as THREE.BoxGeometry
     expect(northBox.parameters.width).toBeCloseTo(400)
@@ -98,7 +109,7 @@ describe('buildScene', () => {
     expect(north.rotation.y).toBeCloseTo(Math.atan2(0, 400))
 
     // East segment yaw straight from atan2(dy, dx).
-    const east = byName.get('wall:w-e') as THREE.Mesh
+    const east = meshChild(scene, 'wall:w-e')
     expect(east.rotation.y).toBeCloseTo(Math.atan2(300, 0))
     expect(east.position.z).toBeCloseTo(150)
   })
@@ -107,7 +118,7 @@ describe('buildScene', () => {
     const store = new HomeStore()
     addRoomFixture(store)
     const scene = buildScene(store.getHome())
-    const room = indexByName(scene).get('room:r-1') as THREE.Mesh
+    const room = meshChild(scene, 'room:r-1')
 
     expect(room.geometry).toBeInstanceOf(THREE.ShapeGeometry)
     expect(room.position.y).toBeCloseTo(25)
@@ -128,7 +139,7 @@ describe('buildScene', () => {
     const store = new HomeStore()
     addRoomFixture(store)
     const scene = buildScene(store.getHome())
-    const table = indexByName(scene).get('furniture:f-1') as THREE.Mesh
+    const table = meshChild(scene, 'furniture:f-1')
 
     const box = table.geometry as THREE.BoxGeometry
     expect(box.parameters.width).toBe(80)
@@ -157,8 +168,8 @@ describe('buildScene', () => {
         thickness: 7,
       })
     })
-    const wall = indexByName(buildScene(store.getHome())).get('wall:w-x') as THREE.Mesh
-    const material = wall.material as THREE.MeshLambertMaterial
+    const wall = meshChild(buildScene(store.getHome()), 'wall:w-x')
+    const material = wall.material as THREE.MeshStandardMaterial
     expect(material.transparent).toBe(true)
     expect(material.opacity).toBeCloseTo(0.5)
   })
@@ -176,8 +187,8 @@ describe('buildScene', () => {
         thickness: 7,
       })
     })
-    const wall = indexByName(buildScene(store.getHome())).get('wall:w-solid') as THREE.Mesh
-    const material = wall.material as THREE.MeshLambertMaterial
+    const wall = meshChild(buildScene(store.getHome()), 'wall:w-solid')
+    const material = wall.material as THREE.MeshStandardMaterial
     expect(material.transparent).toBe(false)
     expect(material.opacity).toBe(1)
   })

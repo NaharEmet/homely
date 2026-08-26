@@ -4,6 +4,9 @@ import type { ClientStatus } from './automation/client'
 import { HomeStore } from './core/store'
 import { HomeModel } from './core/model'
 import { HomelyCommandHandler } from './automation/homely-handler'
+import { FurnitureCatalog } from './core/catalog'
+import { loadDefaultCatalog } from './core/catalog-service'
+import { CatalogPanel } from './ui/catalog-panel'
 import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 
@@ -18,6 +21,7 @@ root.innerHTML = `
   <div id="menu-bar"></div>
   <div id="toolbar"></div>
   <div id="main-area">
+    <div id="catalog-host"></div>
     <div id="plan-panel" class="panel">
       <canvas id="plan-canvas"></canvas>
     </div>
@@ -36,6 +40,7 @@ root.innerHTML = `
 
 const menuBar = root.querySelector<HTMLDivElement>('#menu-bar')!
 const toolbar = root.querySelector<HTMLDivElement>('#toolbar')!
+const catalogHost = root.querySelector<HTMLDivElement>('#catalog-host')!
 const planPanel = root.querySelector<HTMLDivElement>('#plan-panel')!
 const view3dPanel = root.querySelector<HTMLDivElement>('#view3d-panel')!
 const divider = root.querySelector<HTMLDivElement>('#divider')!
@@ -49,7 +54,12 @@ const ctx = canvas.getContext('2d')
 // ── Store + engine ──────────────────────────────────────────────────────────
 
 const store = new HomeStore()
-const engine = new PlanEngine(new HomeModel(store))
+const model = new HomeModel(store)
+const engine = new PlanEngine(model)
+
+// Catalog panel — declared here (used by canvas/key closures) and
+// instantiated in boot once the DOM host exists.
+let catalogPanel: CatalogPanel | null = null
 
 let automationText = 'idle'
 let currentView: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 }
@@ -178,6 +188,7 @@ function buildToolbar(): void {
       <button class="tool-btn" data-tool="room" title="Room — coming soon" disabled>Room</button>
       <button class="tool-btn" data-tool="dimensionLine" title="Dimension — coming soon" disabled>Dim</button>
       <button class="tool-btn" data-tool="label" title="Text — coming soon" disabled>Text</button>
+      <button class="tool-btn" id="btn-catalog" title="Furniture catalog (F)">Furniture</button>
     </div>
     <div class="tool-separator"></div>
     <div class="tool-group">
@@ -223,6 +234,12 @@ function buildToolbar(): void {
   }
 
   toolbar.querySelector('#dark-toggle')!.addEventListener('click', toggleDarkMode)
+
+  toolbar.querySelector('#btn-catalog')!.addEventListener('click', () => {
+    catalogHost.classList.toggle('collapsed')
+    resizeCanvas()
+    refreshStatus()
+  })
 }
 
 function refreshToolbar(): void {
@@ -456,6 +473,15 @@ canvas.addEventListener('pointerup', (event) => {
   if (!pointer.down) return
   pointer.down = false
   const point = eventModelPoint(event)
+
+  // Catalog place mode: a plain click commits the armed piece at the point.
+  if (!pointer.moved && catalogPanel?.isArmed()) {
+    catalogPanel.place(point.x, point.y)
+    refreshToolbar()
+    refreshStatus()
+    return
+  }
+
   if (pointer.moved) {
     engine.drag({
       fromX: pointer.startX,
@@ -530,6 +556,22 @@ window.addEventListener('keydown', (event) => {
     return
   }
 
+  if (event.key === 'f' || event.key === 'F') {
+    event.preventDefault()
+    catalogHost.classList.toggle('collapsed')
+    resizeCanvas()
+    refreshStatus()
+    return
+  }
+
+  // Catalog place mode: Escape disarms instead of switching tools.
+  if (event.key === 'Escape' && catalogPanel?.isArmed()) {
+    event.preventDefault()
+    catalogPanel.disarm()
+    refreshStatus()
+    return
+  }
+
   let key: 'escape' | 'delete' | 'backspace' | null = null
   if (event.key === 'Escape') key = 'escape'
   else if (event.key === 'Delete') key = 'delete'
@@ -600,6 +642,43 @@ new View3D(store, { container: root.querySelector<HTMLDivElement>('#view3d')! })
 const mainArea = root.querySelector<HTMLDivElement>('#main-area')!
 const propsPanel = new PropertiesPanel(store, mainArea)
 
+// Furniture catalog panel — left sidebar (ticket U7). Loaded async from the
+// bundled manifest; until it resolves, place mode is unavailable. connectAutomation
+// awaits this so the shared catalog reaches the automation handler too.
+let sharedCatalog: FurnitureCatalog | null = null
+const catalogReady = loadDefaultCatalog().then(({ catalog }) => {
+  sharedCatalog = catalog
+  catalogPanel = new CatalogPanel({
+    catalog,
+    onPlace: (item, x, y, angleDeg) => {
+      const placed = model.addFurniture({
+        name: item.name,
+        catalogId: item.catalogId,
+        x,
+        y,
+        angleDeg,
+        width: item.width,
+        depth: item.depth,
+        height: item.height,
+        elevation: item.elevation ?? 0,
+        color: item.color ?? null,
+        doorOrWindow: item.doorOrWindow ?? false,
+      })
+      model.setSelection([placed.id])
+      refreshToolbar()
+      refreshStatus()
+      return placed.id
+    },
+    onPlaceModeChange: (active) => {
+      canvas.style.cursor = active ? 'crosshair' : ''
+    },
+  })
+  catalogHost.appendChild(catalogPanel.element)
+}).catch((err) => {
+  console.error('[catalog] failed to load catalog:', err)
+  statusAutomation.textContent = 'automation: catalog unavailable'
+})
+
 // ── Automation ──────────────────────────────────────────────────────────────
 
 async function connectAutomation(): Promise<void> {
@@ -611,7 +690,8 @@ async function connectAutomation(): Promise<void> {
     port = raw === null ? null : Number(raw)
   }
   if (port !== null) {
-    new AutomationClient(new HomelyCommandHandler(store, { planEngine: engine }), {
+    await catalogReady // ensure the shared catalog reaches the handler
+    new AutomationClient(new HomelyCommandHandler(store, { planEngine: engine, catalog: sharedCatalog }), {
       port,
       mode: 'gui',
       onStatus: (status: ClientStatus) => {

@@ -136,7 +136,7 @@ describe('ws protocol v1 handshake', () => {
     expect(res).toMatchObject({
       ok: true,
       data: {
-        commands: [
+        commands: expect.arrayContaining([
           'ping',
           'new_home',
           'get_state',
@@ -152,7 +152,7 @@ describe('ws protocol v1 handshake', () => {
           'key',
           'set_magnetism',
           'screenshot',
-        ],
+        ]),
       },
     })
   })

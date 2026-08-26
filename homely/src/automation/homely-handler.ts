@@ -6,6 +6,8 @@ import { CameraDirector } from '../view3d/cameras'
 import { PlanEngine, type ClickInput, type DragInput, type PlanKey, type PlanTool } from '../plan/engine'
 import { CaptureService, type CaptureBackend } from './capture'
 import type { CommandHandler, CommandResult } from './client'
+import { FurnitureCatalog } from '../core/catalog'
+import { resolvePlacement, toWireItem } from '../core/catalog-service'
 
 const COMMANDS = [
   'ping',
@@ -13,6 +15,8 @@ const COMMANDS = [
   'get_state',
   'get_capabilities',
   'add_furniture',
+  'catalog_add_furniture',
+  'list_catalog',
   'undo',
   'redo',
   'set_camera',
@@ -44,10 +48,16 @@ export class HomelyCommandHandler implements CommandHandler {
   private readonly cameras: CameraDirector
   private readonly plan: PlanEngine
   private readonly capture: CaptureService
+  private readonly catalog: FurnitureCatalog | null
 
   constructor(
     store: HomeStore,
-    options?: { planEngine?: PlanEngine; captureBackend?: CaptureBackend },
+    options?: {
+      planEngine?: PlanEngine
+      captureBackend?: CaptureBackend
+      /** Injectable catalog; omit for inline-only add_furniture (back-compat). */
+      catalog?: FurnitureCatalog | null
+    },
   ) {
     this.store = store
     const model = new HomeModel(store)
@@ -57,6 +67,7 @@ export class HomelyCommandHandler implements CommandHandler {
     // state machine; headless use lazily creates a private one.
     this.plan = options?.planEngine ?? new PlanEngine(model)
     this.capture = new CaptureService(store, this.cameras, options?.captureBackend)
+    this.catalog = options?.catalog ?? null
   }
 
   execute(type: string, params: Record<string, unknown>): CommandResult {
@@ -82,28 +93,95 @@ export class HomelyCommandHandler implements CommandHandler {
       case 'get_capabilities':
         return { ok: true, data: { commands: [...this.commands] } }
       case 'add_furniture': {
-        // Frozen protocol shape is {catalogId,x,y,angleDeg?}; the clone has no
-        // catalog service yet, so dimensions must be supplied inline until a
-        // later ticket (deviation documented in docs/behaviours/).
-        const nameParam = params.name
-        assert(
-          typeof nameParam === 'string' && nameParam.length > 0,
-          'param name must be a non-empty string',
-        )
+        // Frozen protocol shape is {catalogId,x,y,angleDeg?}; dimensions may be
+        // resolved from the loaded catalog (when present) OR supplied inline
+        // (back-compat with the pre-catalog deviation, documented in
+        // docs/behaviours/sh3d-plan-tool-behaviours.md).
         const catalogId = params.catalogId ?? null
         assert(catalogId === null || typeof catalogId === 'string', 'param catalogId must be a string')
+
+        let name: string
+        let width: number
+        let depth: number
+        let height: number
+        let elevation = params.elevation === undefined ? 0 : requireNumber(params, 'elevation')
+        let color: number | null = null
+        let doorOrWindow = false
+
+        if (catalogId !== null && this.catalog) {
+          const resolved = resolvePlacement(this.catalog, catalogId)
+          name = resolved.name
+          width = resolved.width
+          depth = resolved.depth
+          height = resolved.height
+          if (params.elevation === undefined) elevation = resolved.elevation!
+          color = resolved.color ?? null
+          doorOrWindow = resolved.doorOrWindow ?? false
+        } else {
+          const nameParam = params.name
+          assert(
+            typeof nameParam === 'string' && nameParam.length > 0,
+            'param name must be a non-empty string',
+          )
+          name = nameParam
+          width = requireNumber(params, 'width')
+          depth = requireNumber(params, 'depth')
+          height = requireNumber(params, 'height')
+        }
+
         const furniture = this.model.addFurniture({
-          name: nameParam,
+          name,
           catalogId,
           x: requireNumber(params, 'x'),
           y: requireNumber(params, 'y'),
           angleDeg: params.angleDeg === undefined ? 0 : requireNumber(params, 'angleDeg'),
-          width: requireNumber(params, 'width'),
-          depth: requireNumber(params, 'depth'),
-          height: requireNumber(params, 'height'),
-          elevation: params.elevation === undefined ? 0 : requireNumber(params, 'elevation'),
+          width,
+          depth,
+          height,
+          elevation,
+          color,
+          doorOrWindow,
         })
         return { ok: true, data: { id: furniture.id } }
+      }
+      case 'catalog_add_furniture': {
+        // Catalog-driven placement: dims resolved from the manifest, not inline.
+        // Wire shape mirrors ws-protocol.md:79 {catalogId,x,y,angleDeg?}.
+        if (!this.catalog) {
+          return {
+            ok: false,
+            error: 'catalog_add_furniture requires a loaded catalog',
+            code: 'INVALID_REQUEST',
+          }
+        }
+        const catalogId = params.catalogId
+        assert(typeof catalogId === 'string' && catalogId.length > 0, 'param catalogId must be a non-empty string')
+        const resolved = resolvePlacement(this.catalog, catalogId)
+        const furniture = this.model.addFurniture({
+          name: resolved.name,
+          catalogId: resolved.catalogId,
+          x: requireNumber(params, 'x'),
+          y: requireNumber(params, 'y'),
+          angleDeg: params.angleDeg === undefined ? 0 : requireNumber(params, 'angleDeg'),
+          width: resolved.width,
+          depth: resolved.depth,
+          height: resolved.height,
+          elevation: params.elevation === undefined ? resolved.elevation! : requireNumber(params, 'elevation'),
+          color: resolved.color ?? null,
+          doorOrWindow: resolved.doorOrWindow ?? false,
+        })
+        return { ok: true, data: { id: furniture.id } }
+      }
+      case 'list_catalog': {
+        // ws-protocol.md:80 — {items:[{catalogId,name,width,depth,height,doorOrWindow}]}
+        if (!this.catalog) {
+          return {
+            ok: false,
+            error: 'list_catalog requires a loaded catalog',
+            code: 'INVALID_REQUEST',
+          }
+        }
+        return { ok: true, data: { items: this.catalog.list().map(toWireItem) } }
       }
       case 'undo': {
         this.store.undo()
