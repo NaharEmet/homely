@@ -68,7 +68,7 @@ describe('wall tool state machine', () => {
     expect(store.canUndo()).toBe(false)
   })
 
-  it('double-click closes the cycle, joins exactly, and auto-adds a clockwise room', () => {
+  it('double-click closes the cycle, joins exactly, and adds NO room (SH3D parity)', () => {
     const { engine, click, store } = setup()
     engine.setTool('wall')
     engine.setMagnetism(false)
@@ -83,15 +83,9 @@ describe('wall tool state machine', () => {
     const last = home.walls[2]!
     expect([last.xStart, last.yStart]).toEqual([50, -80])
     expect([last.xEnd, last.yEnd]).toEqual([0, 0])
-    expect(home.rooms).toHaveLength(1)
-    const room = home.rooms[0]!
-    expect(room.points).toEqual([
-      [0, 0],
-      [100, 0],
-      [50, -80],
-      [0, 0],
-    ])
-    expect(home.selection).toContain(room.id)
+    // SH3D validateDrawnWalls never creates rooms on loop close.
+    expect(home.rooms).toHaveLength(0)
+    expect(home.selection).toHaveLength(3)
     expect(store.undo()).toBe(true)
     expect(store.getHome().walls).toHaveLength(0)
     expect(store.getHome().rooms).toHaveLength(0)
@@ -285,8 +279,8 @@ describe('equivalence-style script (mirrors scenarios/walls/create_room.yaml)', 
       [400, 0, 400, 300],
     ])
     const home = store.getHome()
-    expect(home.rooms).toHaveLength(1)
-    expect(home.selection).toHaveLength(5) // 4 walls + room
+    expect(home.rooms).toHaveLength(0) // SH3D parity: no auto-room on loop close
+    expect(home.selection).toHaveLength(4)
 
     // Whole room creation is one compound undo step.
     store.undo()

@@ -245,8 +245,8 @@ export class PlanEngine {
     this.phase = 'idle'
     if (segments.length === 0) return
 
-    const closesCycle = segments.length >= 3 && samePoint(segments[0]!.start, segments[segments.length - 1]!.end)
-
+    // SH3D parity: validateDrawnWalls only posts + selects the walls
+    // (PlanController.java:10912); rooms come ONLY from the room tool.
     this.model.addWallChain(
       segments.map((segment) => ({
         xStart: segment.start.x,
@@ -254,7 +254,6 @@ export class PlanEngine {
         xEnd: segment.end.x,
         yEnd: segment.end.y,
       })),
-      closesCycle,
     )
   }
 

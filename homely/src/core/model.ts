@@ -173,15 +173,15 @@ export class HomeModel {
   }
 
   /**
-   * Commits a wall chain (plus optional auto-detected room for a closed
-   * cycle) as ONE undoable compound operation — the clone-side equivalent of
-   * SH3D PlanController.validateDrawnWalls/postCreateWalls. New walls use
-   * the SH3D preference defaults (thickness 7.5 cm, height 250 cm).
+   * Commits a wall chain as ONE undoable compound operation — the clone-side
+   * equivalent of SH3D PlanController.validateDrawnWalls/postCreateWalls.
+   * New walls use the SH3D preference defaults (thickness 7.5 cm, height
+   * 250 cm). SH3D parity: NO room is auto-created on a closed cycle; rooms
+   * come only from addRoom (the room tool).
    */
   addWallChain(
     segments: Array<{ xStart: number; yStart: number; xEnd: number; yEnd: number }>,
-    withRoom = false,
-  ): { wallIds: string[]; roomId: string | null } {
+  ): { wallIds: string[] } {
     assert(Array.isArray(segments) && segments.length > 0, 'wall chain needs at least one segment')
     for (const segment of segments) {
       requireFinite(segment.xStart, 'xStart')
@@ -194,31 +194,7 @@ export class HomeModel {
       )
     }
 
-    const points: Array<[number, number]> = [[segments[0]!.xStart, segments[0]!.yStart]]
-    for (const segment of segments) {
-      points.push([segment.xEnd, segment.yEnd])
-    }
-
-    let roomPoints: Array<[number, number]> | null = null
-    if (withRoom && segments.length >= 3) {
-      const first = segments[0]!
-      const last = segments[segments.length - 1]!
-      const closed =
-        Math.abs(first.xStart - last.xEnd) < 1e-6 && Math.abs(first.yStart - last.yEnd) < 1e-6
-      if (closed) {
-        // Normalize to clockwise orientation (SH3D rooms are clockwise).
-        let area = 0
-        for (let i = 0; i < points.length; i++) {
-          const [ax, ay] = points[i]!
-          const [bx, by] = points[(i + 1) % points.length]!
-          area += ax * by - bx * ay
-        }
-        roomPoints = area < 0 ? points : [...points].reverse()
-      }
-    }
-
     const wallIds: string[] = []
-    let roomId: string | null = null
     this.store.apply((h) => {
       for (const segment of segments) {
         const wall: Wall = {
@@ -233,23 +209,9 @@ export class HomeModel {
         h.walls.push(wall)
         wallIds.push(wall.id)
       }
-      if (roomPoints) {
-        const room: Room = {
-          id: this.store.generateId('room'),
-          points: roomPoints.map(([x, y]) => [x, y] as [number, number]),
-          name: null,
-          areaVisible: true,
-          floorVisible: true,
-          floorColor: null,
-          ceilingVisible: false,
-          levelRef: null,
-        }
-        h.rooms.push(room)
-        roomId = room.id
-      }
-      h.selection = roomId ? [...wallIds, roomId] : [...wallIds]
+      h.selection = [...wallIds]
     })
-    return { wallIds: [...wallIds], roomId }
+    return { wallIds: [...wallIds] }
   }
 
   addRoom(points: Array<[number, number]>, input: Partial<Omit<Room, 'id' | 'points'>> = {}): Room {
