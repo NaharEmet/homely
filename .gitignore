@@ -15,6 +15,7 @@ dist/
 target/
 
 # Harness outputs
+/results/
 equivalence/results/
 equivalence/artifacts/captures/
 *.log
