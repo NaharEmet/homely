@@ -202,18 +202,28 @@ requestAnimationFrame(frame)
 // The 3D view observes the same store.
 new View3D(store, { container: root.querySelector<HTMLDivElement>('#view3d')! })
 
-// B1 seam: the orchestrator passes its port via ?automationPort= (env wiring lands later).
-const port = automationPortFromSearch(window.location.search)
-if (port !== null) {
-  new AutomationClient(new HomelyCommandHandler(store, { planEngine: engine }), {
-    port,
-    mode: 'gui',
-    onStatus: (status: ClientStatus) => {
-      automationText = status
-      refreshStatus()
-    },
-  })
-} else {
-  automationText = 'idle (launch with ?automationPort=<port>)'
-  refreshStatus()
+// Automation wiring: orchestrator port via ?automationPort= (browser/dev seam)
+// or the HOMELY_AUTOMATION_PORT env of the tauri process (launch recipe).
+async function connectAutomation(): Promise<void> {
+  const queryPort = automationPortFromSearch(window.location.search)
+  let port = queryPort
+  if (port === null && '__TAURI_INTERNALS__' in window) {
+    const { invoke } = await import('@tauri-apps/api/core')
+    const raw = await invoke<string | null>('automation_port')
+    port = raw === null ? null : Number(raw)
+  }
+  if (port !== null) {
+    new AutomationClient(new HomelyCommandHandler(store, { planEngine: engine }), {
+      port,
+      mode: 'gui',
+      onStatus: (status: ClientStatus) => {
+        automationText = status
+        refreshStatus()
+      },
+    })
+  } else {
+    automationText = 'idle (launch with ?automationPort=<port>)'
+    refreshStatus()
+  }
 }
+void connectAutomation()
