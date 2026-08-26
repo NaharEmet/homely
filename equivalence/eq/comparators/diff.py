@@ -12,6 +12,10 @@ in the last float digits, so comparisons use tolerances:
 Every failure carries the dotted ``path``, ``expected``, ``actual``, the
 numeric ``delta`` when applicable and the ``objectId`` of the enclosing
 collection item, so reports can pinpoint the offending object directly.
+
+An absent key is treated as equivalent to an explicit ``null`` value (both
+directions, at every nesting level): adapters legitimately serialize
+"no value" either way. A null on one side versus a real value still fails.
 """
 
 from __future__ import annotations
@@ -99,6 +103,7 @@ def deep_diff(
     Numbers are compared with the tolerance of their leaf field name; colors
     must match exactly; everything else compares by equality. Lists are paired
     by index (a length difference additionally yields a ``count`` failure).
+    An absent key equals an explicit ``null`` value in either document.
     """
     failures: list[Failure] = []
     _diff(expected, actual, path, objectId, failures)
@@ -116,11 +121,13 @@ def _diff(
         for key, value in expected.items():
             child = f"{path}.{key}" if path else str(key)
             if key not in actual:
+                if value is None:
+                    continue
                 out.append(Failure(child, "missing", expected=value))
             else:
                 _diff(value, actual[key], child, objectId, out)
         for key, value in actual.items():
-            if key not in expected:
+            if key not in expected and value is not None:
                 child = f"{path}.{key}" if path else str(key)
                 out.append(Failure(child, "extra", actual=value))
         return
@@ -226,6 +233,8 @@ def compare_states(
     for key, value in expected.items():
         child = key
         if key not in actual:
+            if value is None:
+                continue
             failures.append(Failure(child, "missing", expected=value))
             continue
         if key in ("walls", "rooms", "furniture", "dimensionLines", "labels"):
@@ -233,7 +242,7 @@ def compare_states(
         else:
             _diff(value, actual[key], child, None, failures)
     for key, value in actual.items():
-        if key not in expected:
+        if key not in expected and value is not None:
             failures.append(Failure(key, "extra", actual=value))
     return failures
 

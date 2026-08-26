@@ -109,6 +109,73 @@ def test_list_count_mismatch_and_pairing():
     assert any(f.expected == 2 and f.actual == 1 for f in failures)
 
 
+# ------------------------------------------------------- null vs absent keys
+
+
+def test_null_value_equals_absent_key_both_directions():
+    # driver golden serializes "no value" as explicit null; homely omits the key
+    assert deep_diff({"name": None}, {}) == []
+    assert deep_diff({}, {"name": None}) == []
+
+
+def test_null_equals_absent_nested_in_dicts():
+    expected = {"cameras": {"observer": {"fixedSize": None}, "top": {"id": "camera-top-1"}}}
+    # fixedSize: driver null vs homely omitted key -> match
+    assert deep_diff(expected, {"cameras": {"observer": {}, "top": {"id": "camera-top-1"}}}) == []
+    # id: real value vs absent or null -> fail
+    assert deep_diff(expected, {"cameras": {"observer": {}, "top": {}}}) != []
+    assert deep_diff(expected, {"cameras": {"observer": {}, "top": {"id": None}}}) != []
+
+
+def test_null_equals_absent_in_list_items_walls_cameras():
+    expected = {
+        "walls": [
+            {
+                "id": "w1",
+                "xStart": 0.0,
+                "arcExtent": None,
+                "heightAtEnd": None,
+                "levelRef": None,
+                "leftSideColor": None,
+                "rightSideColor": None,
+            }
+        ],
+        "cameras": [{"id": None}],
+    }
+    actual = {"walls": [{"id": "w1", "xStart": 0.0}], "cameras": [{}]}
+    assert deep_diff(expected, actual) == []
+    assert deep_diff(actual, expected) == []
+
+
+def test_compare_states_treats_top_level_absent_as_null():
+    expected = _state()
+    expected["name"] = None
+    assert compare_states(expected, _state()) == []
+
+
+def test_real_null_vs_value_still_fails_both_directions():
+    failures = deep_diff({"walls": [{"arcExtent": None}]}, {"walls": [{"arcExtent": 0.5}]})
+    assert len(failures) == 1
+    assert failures[0].kind == "type"
+    assert failures[0].path == "walls[0].arcExtent"
+    assert deep_diff({"walls": [{"arcExtent": 0.5}]}, {"walls": [{"arcExtent": None}]}) != []
+
+
+def test_absent_key_vs_real_value_still_fails():
+    failures = deep_diff({"heightAtEnd": None}, {})
+    assert failures == []
+    missing = deep_diff({"heightAtEnd": 250.0}, {})
+    assert missing[0].kind == "missing"
+    extra = deep_diff({}, {"patternId": "hatchUp"})
+    assert extra[0].kind == "extra"
+    state_failures = compare_states({"name": "Home"}, _state())
+    assert any(f.kind == "missing" and f.path == "name" for f in state_failures)
+    # actual-only null key is ignored, mirroring the live run's home-name case
+    assert compare_states(_state(), {**_state(), "name": None}) == []
+    state_missing = compare_states(_state(), {"name": None})
+    assert any(f.kind == "missing" and f.path == "schemaVersion" for f in state_missing)
+
+
 # ------------------------------------------------------------------ matching
 
 
