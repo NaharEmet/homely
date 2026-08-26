@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { HomeModel } from '../core/model'
 import { HomeStore } from '../core/store'
 import { CameraDirector, type CameraPatch, type CameraPresetName } from './cameras'
@@ -24,7 +25,10 @@ export class View3D {
   private _scene: THREE.Scene
   private readonly perspectiveCamera: THREE.PerspectiveCamera
   private renderer: THREE.WebGLRenderer | undefined
+  private controls: OrbitControls | undefined
   private readonly unobserve: () => void
+  private _isFirstBuild = true
+  private _animationFrame: number | undefined
   private readonly handleResize = (): void => {
     const container = this.domElement?.parentElement
     if (!container) return
@@ -49,8 +53,19 @@ export class View3D {
       const renderer = new THREE.WebGLRenderer({ antialias: true })
       renderer.setPixelRatio(1)
       renderer.setSize(width, height)
+      renderer.shadowMap.enabled = true
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap
       container.appendChild(renderer.domElement)
       this.renderer = renderer
+
+      this.controls = new OrbitControls(this.perspectiveCamera, renderer.domElement)
+      this.controls.enableDamping = true
+      this.controls.dampingFactor = 0.1
+      this.controls.target.set(0, 0, 0)
+      this.controls.minDistance = 50
+      this.controls.maxDistance = 50_000
+      this.controls.update()
+
       window.addEventListener('resize', this.handleResize)
     }
   }
@@ -65,7 +80,21 @@ export class View3D {
 
   /** Switch which preset the viewport shows ("top" | "observer"). */
   setActivePreset(name: CameraPresetName): void {
-    this.applyCameraState(this.director.usePreset(name))
+    const cam = this.director.usePreset(name)
+
+    if (this.controls) {
+      this.cancelAnimation()
+      const targetPos = new THREE.Vector3(cam.x, cam.z, cam.y)
+      const targetLook = new THREE.Vector3(0, 0, 0)
+
+      this.controls.enableDamping = false
+      this.perspectiveCamera.position.copy(targetPos)
+      this.controls.target.copy(targetLook)
+      this.controls.update()
+      this.controls.enableDamping = true
+    } else {
+      this.applyCameraState(cam)
+    }
     this.render()
   }
 
@@ -85,20 +114,46 @@ export class View3D {
 
   /** Rebuild the whole scene graph from current store state. */
   rebuild(): void {
+    let savedTarget: THREE.Vector3 | undefined
+    let savedPosition: THREE.Vector3 | undefined
+
+    if (this.controls && !this._isFirstBuild) {
+      savedTarget = this.controls.target.clone()
+      savedPosition = this.perspectiveCamera.position.clone()
+    }
+
     this.disposeSceneObjects(this._scene)
     this._scene = buildScene(this.store.getHome())
+
+    if (this.controls && savedTarget && savedPosition) {
+      this.perspectiveCamera.position.copy(savedPosition)
+      this.controls.target.copy(savedTarget)
+      this.controls.update()
+    }
+
+    this._isFirstBuild = false
     this.render()
   }
 
   render(): void {
+    this.controls?.update()
     this.renderer?.render(this._scene, this.perspectiveCamera)
   }
 
   dispose(): void {
+    this.cancelAnimation()
     this.unobserve()
+    this.controls?.dispose()
     if (this.renderer) window.removeEventListener('resize', this.handleResize)
     this.disposeSceneObjects(this._scene)
     this.renderer?.dispose()
+  }
+
+  private cancelAnimation(): void {
+    if (this._animationFrame !== undefined) {
+      cancelAnimationFrame(this._animationFrame)
+      this._animationFrame = undefined
+    }
   }
 
   private syncCamera(): void {

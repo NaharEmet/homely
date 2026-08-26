@@ -13,13 +13,6 @@ export const DEFAULT_FURNITURE_COLOR = 0x9e9e9e
 
 const GROUND_SIZE_CM = 100_000
 
-/**
- * SH3D world mapping (HomeComponent3D.updateViewPlatformTransform /
- * Wall3D.java): plan coords (x, y) map straight to three.js (x, height, y) —
- * no axis mirroring. Walls yaw directly from atan2(dy, dx); camera yaw is
- * applied as rotation.y = PI - yawDeg by the view layer.
- */
-
 function levelElevationMap(home: NormalizedHomeState): Map<string, number> {
   const elevations = new Map<string, number>()
   for (const level of home.levels) elevations.set(level.id, level.elevation)
@@ -37,7 +30,11 @@ function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THR
   const length = Math.hypot(dx, dy)
   const height = wall.height ?? DEFAULT_WALL_HEIGHT_CM
   const geometry = new THREE.BoxGeometry(length, height, wall.thickness)
-  const material = new THREE.MeshLambertMaterial({ color: wall.leftSideColor ?? DEFAULT_WALL_COLOR })
+  const material = new THREE.MeshStandardMaterial({
+    color: wall.leftSideColor ?? DEFAULT_WALL_COLOR,
+    roughness: 0.7,
+    metalness: 0.0,
+  })
   // SH3D Wall3D.java:1522 — wallsAlpha is a TRANSPARENCY (0 = opaque).
   if (wallsTransparency > 0) {
     material.transparent = true
@@ -51,12 +48,32 @@ function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THR
     (wall.yStart + wall.yEnd) / 2,
   )
   mesh.rotation.y = Math.atan2(dy, dx)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
   return mesh
 }
 
+function wallEdges(wall: Wall, elevation: number): THREE.LineSegments {
+  const dx = wall.xEnd - wall.xStart
+  const dy = wall.yEnd - wall.yStart
+  const length = Math.hypot(dx, dy)
+  const height = wall.height ?? DEFAULT_WALL_HEIGHT_CM
+  const geometry = new THREE.BoxGeometry(length, height, wall.thickness)
+  const edges = new THREE.EdgesGeometry(geometry)
+  const line = new THREE.LineSegments(
+    edges,
+    new THREE.LineBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.3 }),
+  )
+  line.position.set(
+    (wall.xStart + wall.xEnd) / 2,
+    elevation + height / 2,
+    (wall.yStart + wall.yEnd) / 2,
+  )
+  line.rotation.y = Math.atan2(dy, dx)
+  return line
+}
+
 function roomMesh(room: Room, elevation: number): THREE.Mesh {
-  // Shape in the XY plane with plan-y negated so rotateX(-PI/2) lands it on
-  // (x, elevation, y_plan) facing up.
   const shape = new THREE.Shape()
   room.points.forEach(([x, y], index) => {
     if (index === 0) shape.moveTo(x, -y)
@@ -64,26 +81,50 @@ function roomMesh(room: Room, elevation: number): THREE.Mesh {
   })
   const geometry = new THREE.ShapeGeometry(shape)
   geometry.rotateX(-Math.PI / 2)
-  const material = new THREE.MeshLambertMaterial({
+  const material = new THREE.MeshStandardMaterial({
     color: room.floorColor ?? DEFAULT_FLOOR_COLOR,
     side: THREE.DoubleSide,
+    roughness: 0.7,
+    metalness: 0.0,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = `room:${room.id}`
   mesh.position.y = elevation
+  mesh.receiveShadow = true
   return mesh
 }
 
 function furnitureMesh(item: Furniture, elevation: number): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(item.width, item.height, item.depth)
-  const material = new THREE.MeshLambertMaterial({
+  const material = new THREE.MeshStandardMaterial({
     color: item.color ?? DEFAULT_FURNITURE_COLOR,
+    roughness: 0.7,
+    metalness: 0.0,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = `furniture:${item.id}`
   mesh.position.set(item.x, elevation + item.elevation + item.height / 2, item.y)
   mesh.rotation.y = THREE.MathUtils.degToRad(item.angleDeg)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
   return mesh
+}
+
+function applySelectionHighlight(scene: THREE.Scene, selectionSet: Set<string>): void {
+  for (const name of selectionSet) {
+    scene.traverse((object) => {
+      if (object.name === name && 'material' in object) {
+        const mesh = object as THREE.Mesh
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        for (const m of mats) {
+          if ('emissive' in m) {
+            ;(m as THREE.MeshStandardMaterial).emissive.set(0x1a66d6)
+            ;(m as THREE.MeshStandardMaterial).emissiveIntensity = 0.3
+          }
+        }
+      }
+    })
+  }
 }
 
 /** Full scene rebuild from a normalized home snapshot. Deterministic. */
@@ -93,33 +134,45 @@ export function buildScene(home: NormalizedHomeState): THREE.Scene {
     scene.background = new THREE.Color(home.environment.skyColor)
   }
 
-  // SH3D lights via Java3D materials/headlight; approximated here with
-  // ambient + directional from environment.lightColor (documented deviation;
-  // photometric parity is a later integration concern).
-  const lightColor = home.environment.lightColor ?? 0xffffff
-  scene.add(new THREE.AmbientLight(lightColor, 0.55))
-  const directional = new THREE.DirectionalLight(lightColor, 0.9)
-  directional.position.set(0.5, 1, 0.35)
+  // HemisphereLight (natural ambient) + AmbientLight (fill) + DirectionalLight (shadows)
+  const skyColor = new THREE.Color(home.environment.skyColor ?? 0xcce4fc)
+  const groundColor = new THREE.Color(home.environment.groundColor ?? 0x808080)
+  scene.add(new THREE.HemisphereLight(skyColor, groundColor, 0.6))
+  scene.add(new THREE.AmbientLight(home.environment.lightColor ?? 0xffffff, 0.3))
+
+  const dirLightColor = new THREE.Color(home.environment.lightColor ?? 0xffffff)
+  const directional = new THREE.DirectionalLight(dirLightColor, 0.8)
+  directional.position.set(200, 400, 300)
+  directional.castShadow = true
+  directional.shadow.mapSize.set(2048, 2048)
+  directional.shadow.camera.near = 1
+  directional.shadow.camera.far = 2000
+  directional.shadow.camera.left = -5000
+  directional.shadow.camera.right = 5000
+  directional.shadow.camera.top = 5000
+  directional.shadow.camera.bottom = -5000
   scene.add(directional)
 
   if (home.environment.groundColor !== null) {
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(GROUND_SIZE_CM, GROUND_SIZE_CM),
-      new THREE.MeshLambertMaterial({ color: home.environment.groundColor }),
+      new THREE.MeshStandardMaterial({ color: home.environment.groundColor }),
     )
     ground.rotation.x = -Math.PI / 2
     ground.name = 'ground'
+    ground.receiveShadow = true
     scene.add(ground)
   }
 
   const elevations = levelElevationMap(home)
-  // SH3D HomeEnvironment default wallsAlpha = 0 (walls fully opaque).
   const wallsTransparency = home.environment.wallsAlpha ?? 0
 
   const root = new THREE.Group()
   root.name = 'home'
   for (const wall of home.walls) {
-    root.add(wallMesh(wall, elevationFor(wall.levelRef, elevations), wallsTransparency))
+    const mesh = wallMesh(wall, elevationFor(wall.levelRef, elevations), wallsTransparency)
+    root.add(mesh)
+    root.add(wallEdges(wall, elevationFor(wall.levelRef, elevations)))
   }
   for (const room of home.rooms) {
     if (room.floorVisible === false || room.points.length < 3) continue
@@ -130,5 +183,12 @@ export function buildScene(home: NormalizedHomeState): THREE.Scene {
     root.add(furnitureMesh(item, elevationFor(item.levelRef, elevations)))
   }
   scene.add(root)
+
+  // Selection highlight
+  if (home.selection.length > 0) {
+    applySelectionHighlight(scene, new Set(home.selection))
+  }
+
+  scene.fog = new THREE.FogExp2(home.environment.skyColor ?? 0xcce4fc, 0.00005)
   return scene
 }
