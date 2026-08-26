@@ -344,7 +344,7 @@ describe('wall vertex interaction', () => {
 
   it('drag on endpoint moves connected walls sharing that endpoint', () => {
     const s = makeWallRoom()
-    const { engine, click, store, drag } = s
+    const { click, store, drag } = s
     // Wall 0: (0,0)-(100,0), Wall 1: (100,0)-(100,80)
     // They share endpoint at (100,0)
     const wall0 = store.getHome().walls[0]!
