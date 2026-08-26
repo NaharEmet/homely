@@ -54,8 +54,19 @@ public final class InteractionCommands {
     }));
 
     dispatcher.register("click", params -> app.callOnEdt(() -> {
-      clickAt(plan(app), reqFloat(params, "x"), reqFloat(params, "y"), 1,
-          optBool(params, "shift", false), optBool(params, "duplication", false));
+      PlanController pc = plan(app);
+      float x = reqFloat(params, "x");
+      float y = reqFloat(params, "y");
+      if (optBool(params, "dbl", false)) {
+        // ws-protocol v1: click{dbl:true} == double-click (press count 2 +
+        // release, no fresh moveMouse) — same semantics as homely's engine.
+        pc.pressMouse(x, y, 2, optBool(params, "shift", false),
+            optBool(params, "duplication", false));
+        pc.releaseMouse(x, y);
+      } else {
+        clickAt(pc, x, y, 1,
+            optBool(params, "shift", false), optBool(params, "duplication", false));
+      }
       return new JsonObject();
     }));
 
@@ -505,10 +516,11 @@ public final class InteractionCommands {
     switch (tool) {
       case "selection": return PlanController.Mode.SELECTION;
       case "panning": return PlanController.Mode.PANNING;
-      case "wall_creation", "walls": return PlanController.Mode.WALL_CREATION;
-      case "room_creation", "rooms": return PlanController.Mode.ROOM_CREATION;
+      // ws-protocol v1 tool names first, then driver aliases.
+      case "wall_creation", "wall", "walls": return PlanController.Mode.WALL_CREATION;
+      case "room_creation", "room", "rooms": return PlanController.Mode.ROOM_CREATION;
       case "polyline_creation", "polyline": return PlanController.Mode.POLYLINE_CREATION;
-      case "dimension_line_creation", "dimension_line":
+      case "dimension_line_creation", "dimension_line", "dimensionLine":
         return PlanController.Mode.DIMENSION_LINE_CREATION;
       case "label_creation", "label": return PlanController.Mode.LABEL_CREATION;
       default:
