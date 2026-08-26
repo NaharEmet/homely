@@ -46,17 +46,21 @@ re-explore the SH3D source before reading it.
 | C9 | baseline-after-setup | C8 | equivalence/eq/adapters | harness-dev | harness-dev | done | 19bb4ea Live E2E run 20260826-130527-suite: both raw states (sh3d step-8.json + tauri step-8.json) are IDENTICAL (walls [wall-1..4], selection [wall-1..4]) yet comparator reports 8 id diffs. Root cause: orchestrator.py captures baseline state BEFORE setup; on long-lived driver the baseline picks up stale IDs from prior sessions, then new_home resets ID counter causing reused IDs to cancel in the delta ledger (delta=[wall-3,wall-4] instead of [wall-1..4]). Fix: move baseline capture to AFTER the last setup step (after setup loop completes, before steps begin). Verify: pytest suite + live E2E run shows 0 state diffs. |
 | D2 | golden-and-slice | C7,C8,B7,B8,B9,C9 | equivalence/scenarios/slice | grace | grace | done | 20260826-141802-suite Live E2E pass: 0 state failures, 0 assertion failures, ok=true. Scenario: create_room (new_home → select_tool wall → magnetism off → 4 wall clicks → closing click → double_click validate). Both apps connected, identical export states. Verified: results/20260826-141802-suite/summary.json ok=true, comparison.json 0 diffs. Golden + expected-state.json from real driver :9450 unchanged. Chain: C7(runner-live)->C8(comparator-null)->B7(camera)->B8(export-defaults)->B9(wall-ids)->C9(baseline-fix)->D2(E2E). |
 | D3 | docs-matrix | D2 | equivalence/matrix | grace | grace | done | features.yaml (2 scenarios + contract coverage matrix), agent handbook (docs/agent-handbook.md), behaviour-notes template (docs/behaviour-notes-template.md). All committed. |
+| U1 | ui-layout-shell | B9 | homely/index.html + homely/src/style.css + homely/src/main.ts | clone-dev | | todo | SH3D-style split layout: menu bar, toolbar row, side-by-side plan+3d panels, status bar. Responsive CSS grid. Dark theme option. |
+| U2 | ui-plan-enhance | U1 | homely/src/plan/renderer.ts + homely/src/style.css | clone-dev | | todo | Plan view polish: grid background (major/minor lines), wall thickness visible as filled shapes not stroked centerlines, room floor fill + area label centered, selection handles (blue outlines + corner dots), zoom-to-fit with scroll wheel, pan with middle-click/Space+drag. |
+| U3 | ui-toolbar-tools | U1 | homely/src/main.ts + homely/src/style.css | clone-dev | | todo | Full toolbar: tool icons (selection/wall/room/dimension/text), undo/redo buttons, camera preset toggle (plan/3d), magnetism checkbox. Keyboard shortcuts displayed as tooltips. Active tool highlight. |
+| U4 | ui-3d-polish | U1 | homely/src/view3d/scene.ts + homely/src/view3d/view.ts | clone-dev | | todo | 3D view polish: wall side textures (leftSideColor/rightSideColor), floor+ceiling for rooms, shadow mapping, better ground plane with grid lines, orbit controls (orbit/pan/zoom), ambient occlusion hint, fog for distance. |
+| U5 | ui-properties | U3,U2 | homely/src + homely/index.html | clone-dev | | todo | Properties panel: right sidebar shows selected object properties (wall: coords/thickness/height, room: area/perimeter, furniture: name/dimensions). Live updates on selection change. |
 
 ## Sequencing waves
 
 ```
 W0  DONE (grace): D0 D1
-W1  parallel:      driver-dev:A1   clone-dev:B1   harness-dev:C1→C2(mock)
-W2  after boot:    driver-dev:A2→A3‖A4          clone-dev:B2→B3‖B4,B5
-                   harness-dev:C3‖C4 (mock-backed, never waits on A/B)
-S1  sync point:    A4+B5 landed → C5 unblocked; golden captures possible
-W3  integration:   grace runs vertical slice E2E; failures become new board rows
-W4  close-out:     D3 matrix/docs (grace + all)
+W1  DONE: driver-dev:A1  clone-dev:B1  harness-dev:C1→C2(mock)
+W2  DONE: A2→A3‖A4  B2→B3‖B4,B5  C3‖C4
+S1  DONE: A4+B5 landed → C5 unblocked
+W3  DONE: E2E integration + B6-B9, C7-C9, D2-D3
+W4  UI phase 1 parallel: clone-dev: U1 (layout shell) → then U2‖U3 (plan enhance + toolbar) → then U4‖U5 (3d polish + properties)
 ```
 
 ## Board rules
@@ -171,6 +175,38 @@ Agent identities: use exactly `driver-dev`, `clone-dev`, `harness-dev`,
   (region config per platform-mode), thresholds configurable per scenario.
   DoD: known-different pair produces score + heatmap; threshold breach flips
   overall verdict.
+
+### Track U — UI (Tauri + HTML/CSS/TS + Three.js)
+
+- **U1 ui-layout-shell** (after B9) — SH3D-style split layout: menu bar with
+  File/Edit/View dropdowns, toolbar row below menu, side-by-side plan canvas +
+  3D container (resizable divider), status bar at bottom. CSS grid layout,
+  responsive. Dark theme option via prefers-color-scheme + toggle. DoD:
+  `npm run tauri dev` shows split panel layout; plan canvas and 3D view both
+  render; window resizes gracefully; dark mode toggle works.
+- **U2 ui-plan-enhance** (after U1) — Plan view: major/minor grid lines
+  (10cm/100cm), walls rendered as filled thick shapes (not stroked centerlines)
+  with proper join corners, room floor fills with centered area labels (m²),
+  selection handles (blue outline + corner dots for furniture), scroll-wheel
+  zoom-to-fit, middle-click or Space+drag pan. DoD: visual comparison with
+  SH3D plan view shows comparable level of detail; zoom/pan smooth; walls
+  show thickness correctly at all zoom levels.
+- **U3 ui-toolbar-tools** (after U1) — Full toolbar: icon buttons for
+  selection/wall/room/dimension/text tools, undo/redo, camera preset toggle
+  (plan/3d split or 3d-only), magnetism checkbox. Keyboard shortcuts shown in
+  tooltips. Active tool highlighted. DoD: all tools selectable; undo/redo
+  buttons reflect engine state; keyboard shortcuts work (Ctrl+Z/Ctrl+Y).
+- **U4 ui-3d-polish** (after U1) — 3D view: wall left/right side colors,
+  room floor + ceiling planes, shadow mapping (directional light), ground
+  plane with grid, OrbitControls (orbit/pan/zoom), distance fog, ambient
+  occlusion approximation via hemisphere light. DoD: 3D view looks comparable
+  to SH3D's 3D view; orbit/pan/zoom functional; shadows visible.
+- **U5 ui-properties** (after U2,U3) — Properties panel: right sidebar showing
+  selected object properties (wall: start/end coords, thickness, height, color;
+  room: area, perimeter, floor visible; furniture: name, position, dimensions,
+  angle, color). Live updates on selection change. Editable fields update
+  model. DoD: select a wall → see its properties; edit thickness → wall
+  updates in plan + 3D view.
 
 ---
 
