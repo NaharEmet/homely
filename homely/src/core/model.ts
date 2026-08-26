@@ -171,6 +171,22 @@ export class HomeModel {
     return this.updateIn('walls', id, patch)
   }
 
+  setWallEndpoint(wallId: string, endpoint: 'start' | 'end', x: number, y: number): void {
+    requireFinite(x, 'x')
+    requireFinite(y, 'y')
+    this.store.apply((h) => {
+      const wall = h.walls.find((w) => w.id === wallId)
+      assert(wall !== undefined, `unknown wall: ${wallId}`)
+      if (endpoint === 'start') {
+        wall.xStart = x
+        wall.yStart = y
+      } else {
+        wall.xEnd = x
+        wall.yEnd = y
+      }
+    })
+  }
+
   removeWall(id: string): boolean {
     return this.removeFrom('walls', id, 'wall')
   }

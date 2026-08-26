@@ -5,6 +5,7 @@ import {
   PlanEngine,
   type ClickInput,
   type DragInput,
+  type HitResult,
 } from '../src/plan/engine'
 import {
   getMagnetizedLength,
@@ -292,5 +293,76 @@ describe('equivalence-style script (mirrors scenarios/walls/create_room.yaml)', 
     store.undo()
     expect(store.getHome().walls).toHaveLength(0)
     expect(store.getHome().rooms).toHaveLength(0)
+  })
+})
+
+describe('wall vertex interaction', () => {
+  function makeWallRoom() {
+    const s = setup()
+    s.engine.setTool('wall')
+    s.engine.setMagnetism(false)
+    s.click(0, 0)
+    s.click(100, 0)
+    s.click(100, 80)
+    s.engine.key('escape')
+    s.engine.setTool('selection')
+    return s
+  }
+
+  it('hitTest near wall endpoint returns wall-endpoint HitResult', () => {
+    const { engine, store } = makeWallRoom()
+    const home = store.getHome()
+    const wall = home.walls[0]!
+    const hit = engine.hitTestPoint({ x: wall.xStart, y: wall.yStart })
+    expect(hit).not.toBeNull()
+    expect(hit!.kind).toBe('wall-endpoint')
+    expect((hit as Extract<HitResult, { kind: 'wall-endpoint' }>).wallId).toBe(wall.id)
+    expect((hit as Extract<HitResult, { kind: 'wall-endpoint' }>).endpoint).toBe('start')
+  })
+
+  it('hitTest on wall body returns wall-body HitResult', () => {
+    const { engine, store } = makeWallRoom()
+    const home = store.getHome()
+    const wall = home.walls[0]!
+    const midX = (wall.xStart + wall.xEnd) / 2
+    const midY = (wall.yStart + wall.yEnd) / 2
+    const hit = engine.hitTestPoint({ x: midX, y: midY })
+    expect(hit).not.toBeNull()
+    expect(hit!.kind).toBe('wall-body')
+  })
+
+  it('setWallEndpoint moves just that endpoint', () => {
+    const { model, store } = makeWallRoom()
+    const wall = store.getHome().walls[0]!
+    model.setWallEndpoint(wall.id, 'end', 200, 50)
+    const updated = store.getHome().walls.find((w) => w.id === wall.id)!
+    expect(updated.xEnd).toBe(200)
+    expect(updated.yEnd).toBe(50)
+    expect(updated.xStart).toBe(wall.xStart)
+    expect(updated.yStart).toBe(wall.yStart)
+  })
+
+  it('drag on endpoint moves connected walls sharing that endpoint', () => {
+    const s = makeWallRoom()
+    const { engine, click, store, drag } = s
+    // Wall 0: (0,0)-(100,0), Wall 1: (100,0)-(100,80)
+    // They share endpoint at (100,0)
+    const wall0 = store.getHome().walls[0]!
+    const wall1 = store.getHome().walls[1]!
+    expect(wall0.xEnd).toBe(100)
+    expect(wall0.yEnd).toBe(0)
+    expect(wall1.xStart).toBe(100)
+    expect(wall1.yStart).toBe(0)
+
+    // Click to select wall 0, then drag its endpoint at (100,0)
+    click(50, 0)
+    drag(100, 0, 120, 0)
+
+    const after0 = store.getHome().walls.find((w) => w.id === wall0.id)!
+    const after1 = store.getHome().walls.find((w) => w.id === wall1.id)!
+    expect(after0.xEnd).toBe(120)
+    expect(after0.yEnd).toBe(0)
+    expect(after1.xStart).toBe(120)
+    expect(after1.yStart).toBe(0)
   })
 })

@@ -51,7 +51,10 @@ re-explore the SH3D source before reading it.
 | U3 | ui-toolbar-tools | U1 | homely/src/main.ts + homely/src/style.css | clone-dev | | todo | Full toolbar: tool icons (selection/wall/room/dimension/text), undo/redo buttons, camera preset toggle (plan/3d), magnetism checkbox. Keyboard shortcuts displayed as tooltips. Active tool highlight. |
 | U4 | ui-3d-polish | U1 | homely/src/view3d/scene.ts + homely/src/view3d/view.ts | clone-dev | clone-dev | done | 1fcfe8c OrbitControls (orbit/pan/zoom w/ damping), shadow mapping, MeshStandardMaterial, edge lines on walls, selection emissive highlight, fog. 123/123 vitest, tsc/eslint/vite clean. |
 | U5 | ui-properties | U3,U2 | homely/src + homely/index.html | clone-dev | | todo | Properties panel: right sidebar shows selected object properties (wall: coords/thickness/height, room: area/perimeter, furniture: name/dimensions). Live updates on selection change. |
-| U6 | wall-vertex-edit | U1 | homely/src/plan + homely/src/core/model.ts + homely/src/main.ts | clone-dev | clone-dev | in_progress | SH3D-style wall vertex interaction: hitTest returns HitResult with endpoint priority, drag endpoint handles reshapes wall + connected chain, renderer draws endpoint squares on selected walls, cursor management. |
+| U6 | wall-vertex-edit | U1 | homely/src/plan + homely/src/core/model.ts + homely/src/main.ts | clone-dev | clone-dev | review | SH3D-style wall vertex interaction: hitTest returns HitResult with endpoint priority, drag endpoint handles reshapes wall + connected chain, renderer draws endpoint squares on selected walls, cursor management. |
+| A5 | furniture-catalog-driver | A2 | equivalence/driver-java | driver-dev | | todo | Expose SH3D's real furniture catalog over the wire: `list_catalog` returning `{catalogId,name,width,depth,height,doorOrWindow}` (ws-protocol.md:80), resolve catalogId in `add_furniture` (ws-protocol.md:79) via SH3D catalog instead of inline dims. DoD: `list_catalog` returns SH3D entries; `add_furniture {catalogId,x,y}` places a real catalog piece; state export matches schema. |
+| U7 | furniture-catalog-ui | U3,U2 | homely/src/ui + homely/src/core + homely/index.html | clone-dev | | todo | Furniture catalog browser (left panel, SH3D-style): category list, search, thumbnail grid, click-to-place in plan view. `list_catalog` protocol command + catalog manifest (JSON, licensed assets). Click places a furniture piece via `addFurniture` with dims resolved from the manifest; selection/move/delete work on placed pieces. DoD: pick a sofa from catalog → click in plan → piece appears in plan + 3D with correct dims; undo/redo works; placed piece selectable/movable. |
+| U8 | furniture-assets-pipeline | U7 | homely/assets + homely/scripts + homely/src-tauri | clone-dev | | todo | Asset pipeline + bundling: commit generated textures (already in homely/assets/textures/ via generate.py), a build/dev script that regenerates/validates textures, furniture 3D model assets (OBJ/GLB) + catalog manifest, Vite copies `assets/` to dist, Tauri bundles it, renderer loads real models instead of BoxGeometry. DoD: `npm run assets` regenerates textures; `npm run tauri build` bundles assets; 3D view renders furniture models, plan view renders catalog thumbnails; no network fetch at runtime. |
 
 ## Sequencing waves
 
@@ -62,6 +65,7 @@ W2  DONE: A2→A3‖A4  B2→B3‖B4,B5  C3‖C4
 S1  DONE: A4+B5 landed → C5 unblocked
 W3  DONE: E2E integration + B6-B9, C7-C9, D2-D3
 W4  UI phase 1 parallel: clone-dev: U1 (layout shell) → then U2‖U3 (plan enhance + toolbar) → then U4‖U5 (3d polish + properties)
+W5  Furniture: driver-dev: A5 (catalog over wire) → clone-dev: U7 (catalog UI, needs U3/U2) → U8 (asset pipeline + bundling, needs U7)
 ```
 
 ## Board rules
@@ -131,6 +135,13 @@ Agent identities: use exactly `driver-dev`, `clone-dev`, `harness-dev`,
   requested size (no chrome); save/open .sh3d via DefaultHomeOutputStream.
   DoD: PNG bytes deterministic across two identical calls; save→open→get_state
   is stable.
+- **A5 furniture-catalog-driver** — expose SH3D's real furniture catalog:
+  `list_catalog` returns `{catalogId,name,width,depth,height,doorOrWindow}`
+  (ws-protocol.md:80), and `add_furniture {catalogId,x,y,angleDeg?}`
+  (ws-protocol.md:79) resolves dims via SH3D's catalog instead of inline
+  params. DoD: `list_catalog` returns non-empty SH3D catalog; placing a
+  catalog piece yields a state export matching the schema with
+  catalogId set; equivalence scenario `furniture_place` added.
 
 ### Track B — Homely (Tauri v2 + Vite + TS + Three.js)
 
@@ -208,6 +219,29 @@ Agent identities: use exactly `driver-dev`, `clone-dev`, `harness-dev`,
   angle, color). Live updates on selection change. Editable fields update
   model. DoD: select a wall → see its properties; edit thickness → wall
   updates in plan + 3D view.
+- **U6 wall-vertex-edit** (after U1) — SH3D-style wall vertex interaction:
+  hitTest returns HitResult with endpoint priority, drag endpoint handles
+  reshapes the wall + connected chain (shared vertex), renderer draws endpoint
+  squares on selected walls, cursor management. DoD: dragging a shared endpoint
+  moves both connected walls' vertex; cursor changes over handles; matches
+  SH3D vertex-drag behaviour.
+- **U7 furniture-catalog-ui** (after U3,U2) — Furniture catalog browser (left
+  panel, SH3D-style): category list, search, thumbnail grid, click-to-place in
+  plan view. Backed by `list_catalog` (ws-protocol.md:80) over the automation
+  port, or a bundled catalog manifest. Click places a furniture piece via
+  `addFurniture` with dims resolved from the catalog entry; selection /
+  move / delete work on placed pieces. DoD: pick a sofa from catalog → click
+  in plan → piece appears in plan + 3D with correct dims; undo/redo works;
+  placed piece selectable + movable + deletable.
+- **U8 furniture-assets-pipeline** (after U7) — Asset pipeline + bundling:
+  commit generated textures (homely/assets/textures/ via generate.py) and add
+  a `npm run assets` script that regenerates/validates them; add furniture 3D
+  model assets (OBJ/GLB) + catalog manifest (licensed, not SH3D-sourced);
+  configure Vite to copy `assets/` into dist and Tauri to bundle it; renderer
+  loads real models instead of BoxGeometry. DoD: `npm run assets` regenerates
+  textures deterministically; `npm run tauri build` bundles assets; 3D view
+  renders furniture models, plan view renders catalog thumbnails; no network
+  fetch at runtime.
 
 ---
 

@@ -249,6 +249,21 @@ export function drawPlan(
     ctx.stroke()
   }
 
+  // Endpoint handles for selected walls.
+  const HANDLE_SIZE = 6
+  for (const wall of home.walls) {
+    if (!selected.has(wall.id)) continue
+    for (const [ex, ey] of [[wall.xStart, wall.yStart], [wall.xEnd, wall.yEnd]] as const) {
+      const px = mapper.sx(ex)
+      const py = mapper.sy(ey)
+      ctx.fillStyle = '#1a66d6'
+      ctx.fillRect(px - HANDLE_SIZE / 2, py - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE)
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 2
+      ctx.strokeRect(px - HANDLE_SIZE / 2, py - HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE)
+    }
+  }
+
   // Furniture as rotated rectangles.
   for (const f of home.furniture) {
     const angleRad = (f.angleDeg * Math.PI) / 180

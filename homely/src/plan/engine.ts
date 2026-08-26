@@ -13,6 +13,16 @@ export const PLAN_SCALE = 1
 export const PIXEL_MARGIN = 4 * PLAN_SCALE
 export const WALL_ENDS_PIXEL_MARGIN = 2 * PLAN_SCALE
 const EPSILON = 1e-6
+const ENDPOINT_HIT_RADIUS = 10
+const CONNECTED_WALL_EPSILON = 0.1
+
+export type HitResult =
+  | { kind: 'wall-endpoint'; wallId: string; endpoint: 'start' | 'end' }
+  | { kind: 'wall-body'; id: string }
+  | { kind: 'furniture'; id: string }
+  | { kind: 'room'; id: string }
+  | { kind: 'label'; id: string }
+  | { kind: 'dimension'; id: string }
 
 export type PlanTool =
   | 'selection'
@@ -67,6 +77,7 @@ export class PlanEngine {
   /** Walls already committed to the home during the open drawing session. */
   private chainIds: Array<string> = []
   private sessionOpen = false
+  private vertexDrag: { wallId: string; endpoint: 'start' | 'end'; startX: number; startY: number; connectedWalls: Array<{ wallId: string; endpoint: 'start' | 'end' }> } | null = null
 
   constructor(model: HomeModel) {
     this.model = model
@@ -110,6 +121,14 @@ export class PlanEngine {
     }
   }
 
+  hitTestPoint(point: Point): HitResult | null {
+    return this.hitTest(this.homeSnapshot(), point)
+  }
+
+  isVertexDragging(): boolean {
+    return this.vertexDrag !== null
+  }
+
   click(input: ClickInput): void {
     this.validateClick(input)
     const point = { x: input.x, y: input.y }
@@ -128,8 +147,38 @@ export class PlanEngine {
     const home = this.homeSnapshot()
     const hit = this.hitTest(home, from)
     if (hit) {
-      if (!home.selection.includes(hit)) {
-        this.model.setSelection([hit])
+      if (hit.kind === 'wall-endpoint') {
+        if (!this.vertexDrag) {
+          const wall = home.walls.find((w) => w.id === hit.wallId)
+          if (!wall) return
+          const sharedPoint = hit.endpoint === 'start'
+            ? { x: wall.xStart, y: wall.yStart }
+            : { x: wall.xEnd, y: wall.yEnd }
+          const connected = this.findConnectedWalls(home, hit.wallId, sharedPoint)
+          const startX = hit.endpoint === 'start' ? wall.xStart : wall.xEnd
+          const startY = hit.endpoint === 'start' ? wall.yStart : wall.yEnd
+          this.vertexDrag = {
+            wallId: hit.wallId,
+            endpoint: hit.endpoint,
+            startX,
+            startY,
+            connectedWalls: connected,
+          }
+          if (!home.selection.includes(hit.wallId)) {
+            this.model.setSelection([hit.wallId])
+          }
+        }
+        const newX = this.vertexDrag.startX + (to.x - from.x)
+        const newY = this.vertexDrag.startY + (to.y - from.y)
+        this.model.setWallEndpoint(this.vertexDrag.wallId, this.vertexDrag.endpoint, newX, newY)
+        for (const cw of this.vertexDrag.connectedWalls) {
+          this.model.setWallEndpoint(cw.wallId, cw.endpoint, newX, newY)
+        }
+        this.vertexDrag = null
+        return
+      }
+      if (!home.selection.includes(hit.id)) {
+        this.model.setSelection([hit.id])
       }
       this.model.moveSelection(to.x - from.x, to.y - from.y)
     } else {
@@ -197,15 +246,16 @@ export class PlanEngine {
         if (!shift) this.model.setSelection([])
         return
       }
+      const hitId = hit.kind === 'wall-endpoint' ? hit.wallId : hit.id
       const selection = home.selection
       if (shift) {
         this.model.setSelection(
-          selection.includes(hit)
-            ? selection.filter((id) => id !== hit)
-            : [...selection, hit],
+          selection.includes(hitId)
+            ? selection.filter((id) => id !== hitId)
+            : [...selection, hitId],
         )
-      } else if (!selection.includes(hit)) {
-        this.model.setSelection([hit])
+      } else if (!selection.includes(hitId)) {
+        this.model.setSelection([hitId])
       } else {
         this.model.setSelection([...selection])
       }
@@ -348,19 +398,35 @@ export class PlanEngine {
     )
   }
 
-  private hitTest(home: NormalizedHomeState, point: Point): string | null {
-    for (let i = home.furniture.length - 1; i >= 0; i--) {
-      const f = home.furniture[i]!
-      // SH3D furniture x/y is the piece CENTER.
-      if (
-        point.x >= f.x - f.width / 2 &&
-        point.x <= f.x + f.width / 2 &&
-        point.y >= f.y - f.depth / 2 &&
-        point.y <= f.y + f.depth / 2
-      ) {
-        return f.id
+  private findConnectedWalls(
+    home: NormalizedHomeState,
+    excludeWallId: string,
+    point: Point,
+  ): Array<{ wallId: string; endpoint: 'start' | 'end' }> {
+    const connected: Array<{ wallId: string; endpoint: 'start' | 'end' }> = []
+    for (const wall of home.walls) {
+      if (wall.id === excludeWallId) continue
+      if (distance(point, { x: wall.xStart, y: wall.yStart }) <= CONNECTED_WALL_EPSILON) {
+        connected.push({ wallId: wall.id, endpoint: 'start' })
+      } else if (distance(point, { x: wall.xEnd, y: wall.yEnd }) <= CONNECTED_WALL_EPSILON) {
+        connected.push({ wallId: wall.id, endpoint: 'end' })
       }
     }
+    return connected
+  }
+
+  private hitTest(home: NormalizedHomeState, point: Point): HitResult | null {
+    // 1. Wall endpoints first (highest priority)
+    for (let i = home.walls.length - 1; i >= 0; i--) {
+      const wall = home.walls[i]!
+      if (distance(point, { x: wall.xStart, y: wall.yStart }) <= ENDPOINT_HIT_RADIUS) {
+        return { kind: 'wall-endpoint', wallId: wall.id, endpoint: 'start' }
+      }
+      if (distance(point, { x: wall.xEnd, y: wall.yEnd }) <= ENDPOINT_HIT_RADIUS) {
+        return { kind: 'wall-endpoint', wallId: wall.id, endpoint: 'end' }
+      }
+    }
+    // 2. Wall body
     for (let i = home.walls.length - 1; i >= 0; i--) {
       const wall = home.walls[i]!
       const dist = distToSegment(
@@ -368,23 +434,40 @@ export class PlanEngine {
         { x: wall.xStart, y: wall.yStart },
         { x: wall.xEnd, y: wall.yEnd },
       )
-      if (dist <= Math.max(wall.thickness / 2, 2) + 1) return wall.id
-    }
-    for (const room of home.rooms) {
-      if (this.pointInPolygon(point, room.points)) return room.id
-    }
-    for (const label of home.labels) {
-      if (Math.abs(point.x - label.x) <= 20 && Math.abs(point.y - label.y) <= 10) {
-        return label.id
+      if (dist <= Math.max(wall.thickness / 2, 2) + 2) {
+        return { kind: 'wall-body', id: wall.id }
       }
     }
+    // 3. Furniture
+    for (let i = home.furniture.length - 1; i >= 0; i--) {
+      const f = home.furniture[i]!
+      if (
+        point.x >= f.x - f.width / 2 &&
+        point.x <= f.x + f.width / 2 &&
+        point.y >= f.y - f.depth / 2 &&
+        point.y <= f.y + f.depth / 2
+      ) {
+        return { kind: 'furniture', id: f.id }
+      }
+    }
+    // 4. Rooms
+    for (const room of home.rooms) {
+      if (this.pointInPolygon(point, room.points)) return { kind: 'room', id: room.id }
+    }
+    // 5. Labels
+    for (const label of home.labels) {
+      if (Math.abs(point.x - label.x) <= 20 && Math.abs(point.y - label.y) <= 10) {
+        return { kind: 'label', id: label.id }
+      }
+    }
+    // 6. Dimension lines
     for (const dim of home.dimensionLines) {
       const dist = distToSegment(
         point,
         { x: dim.xStart, y: dim.yStart },
         { x: dim.xEnd, y: dim.yEnd },
       )
-      if (dist <= PIXEL_MARGIN) return dim.id
+      if (dist <= PIXEL_MARGIN) return { kind: 'dimension', id: dim.id }
     }
     return null
   }

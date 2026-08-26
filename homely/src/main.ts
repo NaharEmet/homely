@@ -409,6 +409,22 @@ canvas.addEventListener('pointermove', (event) => {
   const pt = new ViewMapper(currentView).toModel(coords.px, coords.py)
   statusCursor.textContent = `x: ${pt.x.toFixed(1)}  y: ${pt.y.toFixed(1)}`
 
+  // Cursor management for selection tool
+  if (engine.getTool() === 'selection' && !isPanning && !pointer.down) {
+    const hit = engine.hitTestPoint(pt)
+    if (!hit) {
+      canvas.style.cursor = 'default'
+    } else if (hit.kind === 'wall-endpoint') {
+      canvas.style.cursor = 'crosshair'
+    } else if (hit.kind === 'wall-body') {
+      canvas.style.cursor = 'move'
+    } else {
+      canvas.style.cursor = 'pointer'
+    }
+  } else if (engine.isVertexDragging()) {
+    canvas.style.cursor = 'crosshair'
+  }
+
   if (isPanning) {
     const dx = event.clientX - panLastX
     const dy = event.clientY - panLastY
