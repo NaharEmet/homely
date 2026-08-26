@@ -4,6 +4,7 @@ Examples::
 
     python -m eq.reporting equivalence/scenarios/walls/create_room.yaml
     ./test-equivalence equivalence/scenarios --level 2 --target linux,tauri
+    ./test-equivalence equivalence/scenarios/walls/create_room.yaml --live
 
 Exit code 0 only when every non-skipped scenario passes.
 """
@@ -56,6 +57,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         metavar="OS,MODE",
         help="restrict platform, e.g. linux,tauri ('*' = any)",
     )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help=(
+            "run against the real SH3D driver + homely app instead of mocks. "
+            "Operator steps: (1) cd equivalence/driver-java && DISPLAY=:1 ./run.sh <port>, "
+            "then export EQ_SH3D_PORT=<port> (default 9440; EQ_SH3D_HOST for host); "
+            "(2) launch this command with --live and note the printed automation "
+            "ws-port; (3) in homely/, run HOMELY_AUTOMATION_PORT=<ws-port> npm run tauri dev. "
+            "Combines with --target platform filters."
+        ),
+    )
     args = parser.parse_args(argv)
 
     os_filter, mode_filter = _parse_target(args.target)
@@ -65,6 +78,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         os_filter=os_filter,
         mode_filter=mode_filter,
         level=args.level,
+        target="live" if args.live else "mock",
     )
     container = Path(args.results_root) / aggregate["runId"]
     totals = aggregate["totals"]

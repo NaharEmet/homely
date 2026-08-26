@@ -55,12 +55,13 @@ class IdMap:
             all_ids.update(mapping)
 
         out: dict[str, Any] = dict(state)
-        out["levels"] = [
-            {**level, "id": inv_levels.get(level["id"], level["id"])}
-            if isinstance(level, Mapping) and "id" in level
-            else level
-            for level in state.get("levels", [])
-        ]
+        if "levels" in state:
+            out["levels"] = [
+                {**level, "id": inv_levels.get(level["id"], level["id"])}
+                if isinstance(level, Mapping) and "id" in level
+                else level
+                for level in state.get("levels", [])
+            ]
         for coll in COLLECTIONS:
             if coll not in out or not isinstance(out[coll], list):
                 continue
