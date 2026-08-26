@@ -17,7 +17,8 @@ let client: AutomationClient
 beforeAll(async () => {
   orch = new MockOrchestrator()
   const port = await orch.start()
-  store = new HomeStore()
+  // Fixed zone: compass defaults must not depend on the machine timezone.
+  store = new HomeStore('Asia/Thimphu')
   client = new AutomationClient(new HomelyCommandHandler(store), {
     port,
     mode: 'test',
@@ -77,41 +78,46 @@ describe('ws protocol v1 handshake', () => {
       ]),
     )
     expect(home.schemaVersion).toBe(1)
-    // SH3D 7.5 empty-home ground truth
+    // SH3D 7.5 empty-home ground truth (driver golden create_room.expected-state.json)
     expect(home.levels).toEqual([])
     expect(home.cameras.top).toEqual({
+      id: 'camera-top-1',
       x: 50,
       y: 1050,
       z: 1010,
-      yawDeg: 180,
+      // yaw pi exports wrapped to -180 (docs/behaviours §2)
+      yawDeg: -180,
       pitchDeg: 45,
       fovDeg: 63,
       lens: 'PINHOLE',
     })
     expect(home.cameras.observer).toEqual({
+      id: 'camera-observer-1',
       x: 50,
       y: 50,
       z: 170,
-      // SH3D stores 315°; wire export normalizes degrees into (-180,180]
+      // SH3D stores 315°; wire export wraps into [-180, 180)
       yawDeg: -45,
       pitchDeg: 11.25,
       fovDeg: 63,
       lens: 'PINHOLE',
+      fixedSize: false,
     })
     expect(home.compass).toEqual({
       x: -100,
       y: 50,
       diameter: 100,
       northDirectionDeg: 0,
-      latitudeRad: 0,
-      longitudeRad: 0,
+      // Asia/Thimphu per Compass.java table, exported round3
+      latitudeRad: 0.48,
+      longitudeRad: 1.564,
       visible: true,
     })
     expect(home.environment).toEqual({
       skyColor: 0xcce4fc,
       groundColor: 0xa8a8a8,
       lightColor: 0xd0d0d0,
-      wallsAlpha: 1,
+      wallsAlpha: 0,
     })
     expect(home.capabilities).toEqual({ canUndo: false, canRedo: false })
   })
@@ -120,7 +126,7 @@ describe('ws protocol v1 handshake', () => {
     await awaitHello()
     const res = await orch.sendRequest('new_home')
     expect(res).toMatchObject({ ok: true, data: {} })
-    expect(store.getHome()).toEqual(createEmptyHome())
+    expect(store.getHome()).toEqual(createEmptyHome('Asia/Thimphu'))
     expect(store.canUndo()).toBe(false)
   })
 

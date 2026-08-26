@@ -3,9 +3,11 @@ import type { CompassState, EnvironmentState } from './home'
 
 /**
  * Deterministic wire-format export (docs/specs/ws-protocol.md determinism
- * rules): centimeter lengths and degree angles are rounded half-even to 3
- * decimals; degree angles normalized to (-180, 180]; arcExtent,
- * latitudeRad and longitudeRad stay untouched radians.
+ * rules + docs/behaviours/sh3d-camera-and-export.md §2): centimeter lengths
+ * and degree angles are rounded half-even to 3 decimals; yaw/pitch degrees
+ * wrap into [-180, 180) so yaw π exports as -180.0 (driver toDeg() parity);
+ * fovDeg is a coordinate-like value — plain round3, never wrapped; arcExtent
+ * stays untouched; compass latitudeRad/longitudeRad export round3.
  */
 
 export function roundHalfEven(value: number, decimals = 3): number {
@@ -28,17 +30,23 @@ export function roundHalfEven(value: number, decimals = 3): number {
 
 const TIE_EPSILON = 1e-9
 
-/** Normalize degrees into (-180, 180] (180 stays 180, -180 wraps to 180). */
+/**
+ * Normalize degrees the way the driver's toDeg() lands after round3:
+ * into [-180, 180). 180 (yaw π) wraps to -180 — golden parity, NOT (+)180.
+ */
 export function normalizeAngle(deg: number): number {
   if (!Number.isFinite(deg)) return deg
   let n = ((deg % 360) + 360) % 360
-  if (n > 180) n -= 360
+  if (n >= 180) n -= 360
   return n
 }
 
 const roundLen = (v: number): number => roundHalfEven(v)
 const roundAngle = (v: number | undefined): number | undefined =>
   v === undefined ? undefined : roundHalfEven(normalizeAngle(v))
+// fovDeg exports like a coordinate: plain round3, never angle-wrapped
+// (spherical-lens fov may legitimately exceed 180).
+const roundFov = (v: number): number => roundHalfEven(v)
 
 function roundPoint([x, y]: [number, number]): [number, number] {
   return [roundLen(x), roundLen(y)]
@@ -115,7 +123,7 @@ export function serializeHome(home: NormalizedHomeState): NormalizedHomeState {
         z: roundLen(home.cameras.top.z),
         yawDeg: roundAngle(home.cameras.top.yawDeg)!,
         pitchDeg: roundAngle(home.cameras.top.pitchDeg)!,
-        fovDeg: roundAngle(home.cameras.top.fovDeg)!,
+        fovDeg: roundFov(home.cameras.top.fovDeg),
       },
       observer: {
         ...home.cameras.observer,
@@ -124,7 +132,7 @@ export function serializeHome(home: NormalizedHomeState): NormalizedHomeState {
         z: roundLen(home.cameras.observer.z),
         yawDeg: roundAngle(home.cameras.observer.yawDeg)!,
         pitchDeg: roundAngle(home.cameras.observer.pitchDeg)!,
-        fovDeg: roundAngle(home.cameras.observer.fovDeg)!,
+        fovDeg: roundFov(home.cameras.observer.fovDeg),
       },
     },
     compass: serializeCompass(home.compass),
@@ -139,7 +147,9 @@ function serializeCompass(compass: CompassState): CompassState {
     y: roundLen(compass.y),
     diameter: roundLen(compass.diameter),
     northDirectionDeg: roundAngle(compass.northDirectionDeg)!,
-    // latitudeRad/longitudeRad stay raw radians by contract
+    // Driver exports round3 of the stored (float) radians — golden 0.48/1.564.
+    latitudeRad: roundHalfEven(compass.latitudeRad),
+    longitudeRad: roundHalfEven(compass.longitudeRad),
   }
 }
 

@@ -162,6 +162,25 @@ describe('buildScene', () => {
     expect(material.transparent).toBe(true)
     expect(material.opacity).toBeCloseTo(0.5)
   })
+
+  it('renders default walls opaque: wallsAlpha is transparency, 0 = solid', () => {
+    const store = new HomeStore()
+    expect(store.getHome().environment.wallsAlpha).toBe(0) // SH3D default
+    store.apply((draft) => {
+      draft.walls.push({
+        id: 'w-solid',
+        xStart: 0,
+        yStart: 0,
+        xEnd: 100,
+        yEnd: 0,
+        thickness: 7,
+      })
+    })
+    const wall = indexByName(buildScene(store.getHome())).get('wall:w-solid') as THREE.Mesh
+    const material = wall.material as THREE.MeshLambertMaterial
+    expect(material.transparent).toBe(false)
+    expect(material.opacity).toBe(1)
+  })
 })
 
 describe('camera conventions', () => {

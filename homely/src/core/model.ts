@@ -15,8 +15,11 @@ import type { HomeStore } from './store'
 
 export const DEFAULT_LEVEL_HEIGHT_CM = DEFAULT_WALL_HEIGHT_CM
 
-/** DefaultUserPreferences.properties: newWallThickness=7.5 */
-export const NEW_WALL_THICKNESS_CM = 7.5
+/** Driver forces prefs newWallThickness=7f at boot (SH3D stock default is 7.5). */
+export const NEW_WALL_THICKNESS_CM = 7
+
+/** Home.NEW_WALL_PATTERN default: walls created by the wall tool get hatchUp. */
+export const NEW_WALL_PATTERN_ID = 'hatchUp'
 
 /** Thrown by HomeModel ops on invalid input; surfaces as INVALID_PARAMS over automation. */
 export class ModelError extends Error {}
@@ -175,9 +178,9 @@ export class HomeModel {
   /**
    * Commits a wall chain as ONE undoable compound operation — the clone-side
    * equivalent of SH3D PlanController.validateDrawnWalls/postCreateWalls.
-   * New walls use the SH3D preference defaults (thickness 7.5 cm, height
-   * 250 cm). SH3D parity: NO room is auto-created on a closed cycle; rooms
-   * come only from addRoom (the room tool).
+   * New walls use the driver's preference defaults (thickness 7 cm, height
+   * 250 cm, pattern 'hatchUp'). SH3D parity: NO room is auto-created on a
+   * closed cycle; rooms come only from addRoom (the room tool).
    */
   addWallChain(
     segments: Array<{ xStart: number; yStart: number; xEnd: number; yEnd: number }>,
@@ -205,6 +208,7 @@ export class HomeModel {
           yEnd: segment.yEnd,
           thickness: NEW_WALL_THICKNESS_CM,
           height: DEFAULT_WALL_HEIGHT_CM,
+          patternId: NEW_WALL_PATTERN_ID,
         }
         h.walls.push(wall)
         wallIds.push(wall.id)

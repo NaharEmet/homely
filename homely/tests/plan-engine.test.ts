@@ -245,7 +245,7 @@ describe('selection interactions', () => {
     expect(store.getHome().walls).toHaveLength(2)
   })
 
-  it('new walls use the SH3D default thickness and height', () => {
+  it('new walls use the driver defaults: thickness 7, height 250, pattern hatchUp', () => {
     const s = setup()
     s.engine.setTool('wall')
     s.click(0, 0)
@@ -253,7 +253,9 @@ describe('selection interactions', () => {
     s.engine.key('escape')
     const wall = s.store.getHome().walls[0]!
     expect(wall.thickness).toBe(NEW_WALL_THICKNESS_CM)
+    expect(NEW_WALL_THICKNESS_CM).toBe(7) // driver forces prefs thickness=7f
     expect(wall.height).toBe(250)
+    expect(wall.patternId).toBe('hatchUp')
   })
 })
 

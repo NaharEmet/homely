@@ -16,10 +16,18 @@ import { followTopCamera } from './top-camera-follower'
 export class HomeStore {
   static readonly MAX_UNDO_DEPTH = 100
 
-  private home: NormalizedHomeState = createEmptyHome()
+  private home: NormalizedHomeState
   private undoStack: NormalizedHomeState[] = []
   private redoStack: NormalizedHomeState[] = []
   private idCounter = 1
+
+  /**
+   * timeZoneId feeds the compass location default (SH3D reads the OS zone);
+   * injectable so tests are deterministic regardless of machine timezone.
+   */
+  constructor(private readonly timeZoneId?: string | null) {
+    this.home = createEmptyHome(timeZoneId)
+  }
 
   /** Deep copy with live capability flags stamped in (never stale). */
   getHome(): NormalizedHomeState {
@@ -92,7 +100,7 @@ export class HomeStore {
    * (createEmptyHome already carries it); orbiting would wrongly preserve the
    * old distance. */
   resetToEmpty(): void {
-    this.home = createEmptyHome()
+    this.home = createEmptyHome(this.timeZoneId)
     this.undoStack = []
     this.redoStack = []
     this.idCounter = 1

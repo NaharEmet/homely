@@ -1,7 +1,8 @@
 import Ajv2020 from 'ajv/dist/2020'
 import { describe, expect, it } from 'vitest'
 import schemaJson from '../../docs/schema/home-project.schema.json'
-import type { LensName } from '../src/core/home'
+import createRoomGolden from '../../equivalence/scenarios/slice/goldens/create_room.expected-state.json'
+import type { LensName, NormalizedHomeState } from '../src/core/home'
 import { normalizeAngle, roundHalfEven, serializeHome } from '../src/core/export'
 import { createEmptyHome } from '../src/core/home'
 import { HomeModel } from '../src/core/model'
@@ -46,24 +47,58 @@ describe('roundHalfEven', () => {
 })
 
 describe('normalizeAngle', () => {
-  it('maps into (-180, 180] keeping 180 positive', () => {
-    expect(normalizeAngle(180)).toBe(180)
-    expect(normalizeAngle(-180)).toBe(180)
+  it('maps into [-180, 180) so yaw pi exports as -180 (driver golden)', () => {
+    expect(normalizeAngle(180)).toBe(-180)
+    expect(normalizeAngle(-180)).toBe(-180)
     expect(normalizeAngle(185)).toBe(-175)
     expect(normalizeAngle(-185)).toBe(175)
-    expect(normalizeAngle(540)).toBe(180)
+    expect(normalizeAngle(540)).toBe(-180)
     expect(normalizeAngle(0)).toBe(0)
     expect(normalizeAngle(315)).toBe(-45)
+    // values strictly inside the range pass through (modulo float noise is
+    // cleaned up by the round3 that always follows)
+    expect(normalizeAngle(179.9)).toBeCloseTo(179.9, 10)
+    expect(normalizeAngle(-179.9)).toBeCloseTo(-179.9, 10)
+    expect(normalizeAngle(45.5)).toBe(45.5)
   })
 })
 
 describe('serializeHome determinism', () => {
-  it('empty home keeps integral values but normalizes degrees into (-180,180]', () => {
-    const out = serializeHome(createEmptyHome())
-    // SH3D observer default yaw is stored as 315°; wire format normalizes it.
-    expect(out.cameras.observer.yawDeg).toBe(-45)
-    expect(out.cameras.top).toEqual(createEmptyHome().cameras.top)
-    expect(out.compass).toEqual(createEmptyHome().compass)
+  it('empty home exports SH3D golden defaults (Thimphu zone, ids, wallsAlpha 0)', () => {
+    const home = createEmptyHome('Asia/Thimphu')
+    const out = serializeHome(home)
+    // yaw 180 (pi) wraps to -180 on the wire — driver toDeg() parity
+    expect(out.cameras.top).toEqual({
+      id: 'camera-top-1',
+      x: 50,
+      y: 1050,
+      z: 1010,
+      yawDeg: -180,
+      pitchDeg: 45,
+      fovDeg: 63,
+      lens: 'PINHOLE',
+    })
+    expect(out.cameras.observer).toEqual({
+      id: 'camera-observer-1',
+      x: 50,
+      y: 50,
+      z: 170,
+      yawDeg: -45,
+      pitchDeg: 11.25,
+      fovDeg: 63,
+      lens: 'PINHOLE',
+      fixedSize: false,
+    })
+    expect(out.compass).toEqual({
+      x: -100,
+      y: 50,
+      diameter: 100,
+      northDirectionDeg: 0,
+      latitudeRad: 0.48, // round3(toRadians(27.4833333f)) — golden
+      longitudeRad: 1.564, // round3(toRadians(89.6f)) — golden
+      visible: true,
+    })
+    expect(out.environment.wallsAlpha).toBe(0)
     expect(out.walls).toEqual([])
     expect(out.selection).toEqual([])
     expect(out.capabilities).toEqual({ canUndo: false, canRedo: false })
@@ -134,8 +169,8 @@ describe('serializeHome determinism', () => {
     })
     const f = serializeHome(store.getHome()).furniture[0]
     expect(f?.pitchDeg).toBe(-175)
-    expect(f?.rollDeg).toBe(180)
-    expect(f?.modelRotationDeg).toEqual([[180, -90, -45]])
+    expect(f?.rollDeg).toBe(-180)
+    expect(f?.modelRotationDeg).toEqual([[-180, -90, -45]])
   })
 
   it('does not mutate the input state', () => {
@@ -147,15 +182,23 @@ describe('serializeHome determinism', () => {
     expect(home.walls[0]?.xStart).toBe(raw.xStart)
   })
 
-  it('leaves radian fields untouched (arcExtent, latitude/longitude)', () => {
-    const store = new HomeStore()
+  it('leaves arcExtent untouched but exports compass radians round3', () => {
+    const store = new HomeStore('UTC')
     const model = new HomeModel(store)
     model.addWall({ ...{ xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 10 }, arcExtent: Math.PI / 3 })
     model.setCompass({ latitudeRad: Math.PI / 4, longitudeRad: 0.123456789 })
     const out = serializeHome(store.getHome())
     expect(out.walls[0]?.arcExtent).toBe(Math.PI / 3)
-    expect(out.compass.latitudeRad).toBe(Math.PI / 4)
-    expect(out.compass.longitudeRad).toBe(0.123456789)
+    expect(out.compass.latitudeRad).toBe(0.785)
+    expect(out.compass.longitudeRad).toBe(0.123)
+  })
+
+  it('exports fovDeg with plain round3 without angle wrapping', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    model.moveTopCamera({ fovDeg: 62.98765 })
+    const out = serializeHome(store.getHome())
+    expect(out.cameras.top.fovDeg).toBe(62.988)
   })
 })
 
@@ -280,4 +323,62 @@ describe('schema validation via ajv (draft 2020-12)', () => {
     badAlpha.environment.wallsAlpha = 2
     expectInvalid(badAlpha, 'wallsAlpha')
   })
+})
+
+describe('driver golden parity (create_room.expected-state.json)', () => {
+  // Read-only reference generated by the real Java driver — never modified.
+  const golden = createRoomGolden as unknown as {
+    cameras: NormalizedHomeState['cameras']
+    compass: NormalizedHomeState['compass']
+    environment: NormalizedHomeState['environment']
+    walls: Array<Record<string, unknown>>
+    selection: string[]
+    activeTool: string
+  }
+
+  function replayCreateRoom(): HomeStore {
+    const store = new HomeStore('Asia/Thimphu') // build machine zone per contract §3
+    const model = new HomeModel(store)
+    model.setActiveTool('wall')
+    model.addWallChain([
+      { xStart: 100, yStart: 100, xEnd: 600, yEnd: 100 },
+      { xStart: 600, yStart: 100, xEnd: 600, yEnd: 400 },
+      { xStart: 600, yStart: 400, xEnd: 100, yEnd: 400 },
+      { xStart: 100, yStart: 400, xEnd: 100, yEnd: 100 },
+    ])
+    return store
+  }
+
+  it('wall chain exports thickness 7, patternId hatchUp, height 250 like the driver', () => {
+    const out = serializeHome(replayCreateRoom().getHome())
+    expect(out.walls).toHaveLength(golden.walls.length)
+    for (const [exported, expected] of zip(out.walls, golden.walls)) {
+      for (const key of [
+        'xStart',
+        'yStart',
+        'xEnd',
+        'yEnd',
+        'thickness',
+        'height',
+        'patternId',
+      ] as const) {
+        expect(exported[key]).toBe(expected[key])
+      }
+    }
+  })
+
+  it('cameras, compass and environment match the golden exactly', () => {
+    const out = serializeHome(replayCreateRoom().getHome())
+    expect(out.cameras.top).toEqual(golden.cameras.top)
+    expect(out.cameras.observer).toEqual(golden.cameras.observer)
+    expect(out.compass).toEqual(golden.compass)
+    expect(out.environment).toEqual(golden.environment)
+    expect(out.selection).toEqual(golden.selection)
+    expect(out.activeTool).toBe(golden.activeTool)
+    expect(out.capabilities.canUndo).toBe(true)
+  })
+
+  function zip<A, B>(a: A[], b: B[]): Array<[A, B]> {
+    return a.map((item, i) => [item, b[i]] as [A, B])
+  }
 })

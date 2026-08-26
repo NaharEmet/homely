@@ -4,10 +4,16 @@
  * otherwise (arcExtent stays radians, latitudeRad/longitudeRad radians).
  */
 
+import { compassRadiansForZone, resolveTimezone } from './compass-timezones'
+
 export const SCHEMA_VERSION = 1
 
 /** Default wall height in cm (SH3D UserPreferences default). */
 export const DEFAULT_WALL_HEIGHT_CM = 250
+
+/** Stable export ids for the two SH3D cameras (driver IdAssigner parity). */
+export const TOP_CAMERA_ID = 'camera-top-1'
+export const OBSERVER_CAMERA_ID = 'camera-observer-1'
 
 export type LensName = 'PINHOLE' | 'NORMAL' | 'FISHEYE' | 'SPHERICAL'
 
@@ -105,6 +111,7 @@ export interface Label {
 }
 
 export interface CameraState {
+  id?: string
   x: number
   y: number
   z: number
@@ -137,7 +144,7 @@ export interface EnvironmentState {
   skyColor: number | null
   groundColor: number | null
   lightColor: number | null
-  /** 0..1; 1 = fully opaque walls in 3D view. */
+  /** SH3D walls TRANSPARENCY: 0 = opaque (default), 1 = invisible. */
   wallsAlpha: number | null
 }
 
@@ -165,10 +172,18 @@ export interface NormalizedHomeState {
 
 /**
  * A truly empty Sweet Home 3D 7.5 home: no levels (created on demand),
- * default top/observer cameras, visible compass at (-100, 50) d=100,
- * gray ground / blue sky / light-gray light, opaque walls.
+ * default top/observer cameras, visible compass at (-100, 50) d=100 located
+ * at the OS timezone's coordinates (Compass.initGeographicPoint parity,
+ * docs/behaviours/sh3d-camera-and-export.md §3), gray ground / blue sky /
+ * light-gray light, fully opaque walls (wallsAlpha transparency 0).
+ *
+ * timeZoneId is injectable for deterministic tests; omitted = OS zone via
+ * Intl, unknown zones fall back to the SH3D Etc/GMT entry.
  */
-export function createEmptyHome(): NormalizedHomeState {
+export function createEmptyHome(timeZoneId?: string | null): NormalizedHomeState {
+  const { latitudeRad, longitudeRad } = compassRadiansForZone(
+    timeZoneId === undefined ? resolveTimezone() : timeZoneId,
+  )
   return {
     schemaVersion: SCHEMA_VERSION,
     levels: [],
@@ -179,8 +194,18 @@ export function createEmptyHome(): NormalizedHomeState {
     labels: [],
     selection: [],
     cameras: {
-      top: { x: 50, y: 1050, z: 1010, yawDeg: 180, pitchDeg: 45, fovDeg: 63, lens: 'PINHOLE' },
+      top: {
+        id: TOP_CAMERA_ID,
+        x: 50,
+        y: 1050,
+        z: 1010,
+        yawDeg: 180,
+        pitchDeg: 45,
+        fovDeg: 63,
+        lens: 'PINHOLE',
+      },
       observer: {
+        id: OBSERVER_CAMERA_ID,
         x: 50,
         y: 50,
         z: 170,
@@ -188,6 +213,7 @@ export function createEmptyHome(): NormalizedHomeState {
         pitchDeg: 11.25,
         fovDeg: 63,
         lens: 'PINHOLE',
+        fixedSize: false,
       },
     },
     compass: {
@@ -195,15 +221,15 @@ export function createEmptyHome(): NormalizedHomeState {
       y: 50,
       diameter: 100,
       northDirectionDeg: 0,
-      latitudeRad: 0,
-      longitudeRad: 0,
+      latitudeRad,
+      longitudeRad,
       visible: true,
     },
     environment: {
       skyColor: 0xcce4fc,
       groundColor: 0xa8a8a8,
       lightColor: 0xd0d0d0,
-      wallsAlpha: 1,
+      wallsAlpha: 0,
     },
     activeTool: null,
     capabilities: { canUndo: false, canRedo: false },

@@ -31,16 +31,17 @@ function elevationFor(ref: string | null | undefined, levels: Map<string, number
   return levels.get(ref) ?? 0
 }
 
-function wallMesh(wall: Wall, elevation: number, wallsAlpha: number): THREE.Mesh {
+function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THREE.Mesh {
   const dx = wall.xEnd - wall.xStart
   const dy = wall.yEnd - wall.yStart
   const length = Math.hypot(dx, dy)
   const height = wall.height ?? DEFAULT_WALL_HEIGHT_CM
   const geometry = new THREE.BoxGeometry(length, height, wall.thickness)
   const material = new THREE.MeshLambertMaterial({ color: wall.leftSideColor ?? DEFAULT_WALL_COLOR })
-  if (wallsAlpha < 1) {
+  // SH3D Wall3D.java:1522 — wallsAlpha is a TRANSPARENCY (0 = opaque).
+  if (wallsTransparency > 0) {
     material.transparent = true
-    material.opacity = wallsAlpha
+    material.opacity = 1 - wallsTransparency
   }
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = `wall:${wall.id}`
@@ -112,12 +113,13 @@ export function buildScene(home: NormalizedHomeState): THREE.Scene {
   }
 
   const elevations = levelElevationMap(home)
-  const wallsAlpha = home.environment.wallsAlpha ?? 1
+  // SH3D HomeEnvironment default wallsAlpha = 0 (walls fully opaque).
+  const wallsTransparency = home.environment.wallsAlpha ?? 0
 
   const root = new THREE.Group()
   root.name = 'home'
   for (const wall of home.walls) {
-    root.add(wallMesh(wall, elevationFor(wall.levelRef, elevations), wallsAlpha))
+    root.add(wallMesh(wall, elevationFor(wall.levelRef, elevations), wallsTransparency))
   }
   for (const room of home.rooms) {
     if (room.floorVisible === false || room.points.length < 3) continue
