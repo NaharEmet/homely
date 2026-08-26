@@ -1,0 +1,35 @@
+# D2 vertical slice: four walls forming a closed 500x300 room, driven
+# identically into both real apps. Recipe follows the SH3D wall-tool close
+# sequence (docs/behaviours/sh3d-plan-tool-behaviours.md #3): the 5th plain
+# click at the start point commits the closing wall, then click{dbl:true}
+# is a BARE second press that joins + validates (one compound undo edit).
+# SH3D parity note: NO room is auto-created on loop close (B6) — do not
+# assert rooms here.
+name: create-room
+description: >
+  Chain the wall tool around a 500x300 rectangle, commit the closing wall
+  with a click on the starting corner, then double-click to join + validate,
+  producing exactly 4 walls.
+target:
+  os: [linux]
+  mode: [tauri]
+setup:
+  - new_home:
+steps:
+  - select_tool: {tool: wall}
+  - set_magnetism: {enabled: false}
+  - click: {x: 100, y: 100}
+  - click: {x: 600, y: 100}
+  - click: {x: 600, y: 400}
+  - click: {x: 100, y: 400}
+  - click: {x: 100, y: 100}
+  - click: {x: 100, y: 100, dbl: true}
+checkpoints:
+  - afterStep: 8
+    capture: [state]
+assertions:
+  - at: 8
+    artifact: state
+    kind: count
+    path: walls
+    value: 4
