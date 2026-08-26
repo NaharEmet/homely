@@ -51,6 +51,7 @@ re-explore the SH3D source before reading it.
 | U3 | ui-toolbar-tools | U1 | homely/src/main.ts + homely/src/style.css | clone-dev | | todo | Full toolbar: tool icons (selection/wall/room/dimension/text), undo/redo buttons, camera preset toggle (plan/3d), magnetism checkbox. Keyboard shortcuts displayed as tooltips. Active tool highlight. |
 | U4 | ui-3d-polish | U1 | homely/src/view3d/scene.ts + homely/src/view3d/view.ts | clone-dev | clone-dev | done | 1fcfe8c OrbitControls (orbit/pan/zoom w/ damping), shadow mapping, MeshStandardMaterial, edge lines on walls, selection emissive highlight, fog. 123/123 vitest, tsc/eslint/vite clean. |
 | U5 | ui-properties | U3,U2 | homely/src + homely/index.html | clone-dev | | todo | Properties panel: right sidebar shows selected object properties (wall: coords/thickness/height, room: area/perimeter, furniture: name/dimensions). Live updates on selection change. |
+| U6 | wall-vertex-edit | U1 | homely/src/plan + homely/src/core/model.ts + homely/src/main.ts | clone-dev | clone-dev | in_progress | SH3D-style wall vertex interaction: hitTest returns HitResult with endpoint priority, drag endpoint handles reshapes wall + connected chain, renderer draws endpoint squares on selected walls, cursor management. |
 
 ## Sequencing waves
 
