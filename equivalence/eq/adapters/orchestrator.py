@@ -115,21 +115,12 @@ class Orchestrator:
         errors: list[dict[str, Any]] = []
 
         prev_ids: dict[str, dict[str, set[str]]] = {}
-        for name, adapter in self.adapters.items():
-            try:
-                state = await asyncio.wait_for(adapter.request("get_state"), REQUEST_TIMEOUT)
-                prev_ids[name] = _collect_ids(state)
-            except AdapterError as exc:
-                errors.append({"phase": "baseline", "adapter": name, "code": exc.code, "error": exc.error})
-                prev_ids[name] = {coll: set() for coll in COLLECTIONS}
-            except Exception as exc:  # noqa: BLE001 - baseline is best-effort
-                errors.append({"phase": "baseline", "adapter": name, "code": "INTERNAL", "error": str(exc)})
-                prev_ids[name] = {coll: set() for coll in COLLECTIONS}
 
         checkpoints = {cp.afterStep: cp for cp in self.scenario.checkpoints}
         plan = [("setup", i, step) for i, step in enumerate(self.scenario.setup, 1)]
         plan += [("steps", i, step) for i, step in enumerate(self.scenario.steps, 1)]
 
+        baseline_captured = False
         for phase, index, step in plan:
             entry: dict[str, Any] = {
                 "phase": phase,
@@ -156,6 +147,25 @@ class Orchestrator:
             actions.append(entry)
 
             if phase != "steps":
+                # Capture baseline after the last setup step completes.
+                # This ensures the baseline reflects post-setup state (e.g.
+                # after new_home), avoiding ID collisions when the adapter
+                # reuses IDs after a reset.  Capturing more than once is
+                # harmless — we overwrite prev_ids.
+                if not baseline_captured:
+                    baseline_captured = True
+                    for bname, badapter in self.adapters.items():
+                        try:
+                            bstate = await asyncio.wait_for(
+                                badapter.request("get_state"), REQUEST_TIMEOUT,
+                            )
+                            prev_ids[bname] = _collect_ids(bstate)
+                        except AdapterError as exc:
+                            errors.append({"phase": "baseline", "adapter": bname, "code": exc.code, "error": exc.error})
+                            prev_ids[bname] = {coll: set() for coll in COLLECTIONS}
+                        except Exception as exc:  # noqa: BLE001
+                            errors.append({"phase": "baseline", "adapter": bname, "code": "INTERNAL", "error": str(exc)})
+                            prev_ids[bname] = {coll: set() for coll in COLLECTIONS}
                 continue
             checkpoint = checkpoints.get(index)
             if checkpoint is None:

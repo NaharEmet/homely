@@ -158,8 +158,8 @@ def test_live_suite_end_to_end_with_fakes(tmp_path, monkeypatch):
     manifest = json.loads((scenario_dir / "manifest.json").read_text())
     assert manifest["adapters"] == ["sh3d", "tauri"]
     assert sorted(p.name for p in (scenario_dir / "states").iterdir()) == ["sh3d", "tauri"]
-    # baseline get_state, setup new_home, steps, checkpoint get_state
-    assert received == ["get_state", "new_home", "select_tool", "click", "get_state"]
+    # setup new_home, baseline get_state (after setup), steps, checkpoint get_state
+    assert received == ["new_home", "get_state", "select_tool", "click", "get_state"]
     # teardown: session adopted then released, driver connection closed
     assert server.sessions == {}
     assert fake_driver._writers == []
