@@ -238,10 +238,11 @@ describe('CaptureService 3d pipeline', () => {
     cameras.usePreset('top')
     service.screenshot({ view: '3d', width: 800, height: 600 })
     const second = backend.calls[1]
-    // SH3D top preset: plan(50,1050), height z=1010; world pos=(x, z, y).
-    expect(second?.camera?.py).toBe(1010)
-    expect(second?.camera?.pz).toBe(1050)
-    expect(second?.camera?.px).toBe(50)
+    // Top camera follows contents (B7): L-shaped walls give bounds center
+    // (201.75,148.25,125) with the fresh-home distance 1414.21 preserved.
+    expect(second?.camera?.py).toBeCloseTo(1125)
+    expect(second?.camera?.pz).toBeCloseTo(1148.25)
+    expect(second?.camera?.px).toBeCloseTo(201.75)
     expect(second?.camera?.fov).toBe(63)
   })
 

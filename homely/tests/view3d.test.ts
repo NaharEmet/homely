@@ -248,7 +248,11 @@ describe('View3D live sync', () => {
 
     view.setActivePreset('top')
     expect(countNamed(view.scene, 'wall:')).toBe(4)
-    expect(view.camera.position.y).toBeCloseTo(1010)
+    // Top camera follows home contents (SH3D TopCameraState parity, B7):
+    // fixture bounds center (200,150,137.5), distance 1414.21 preserved.
+    expect(view.camera.position.y).toBeCloseTo(1137.5)
+    expect(view.camera.position.x).toBeCloseTo(200)
+    expect(view.camera.position.z).toBeCloseTo(1150)
 
     view.dispose()
   })

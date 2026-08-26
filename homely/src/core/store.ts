@@ -1,4 +1,5 @@
 import { createEmptyHome, type NormalizedHomeState } from './home'
+import { followTopCamera } from './top-camera-follower'
 
 /**
  * Pure home state store. Zero platform imports; all mutation goes through
@@ -6,6 +7,11 @@ import { createEmptyHome, type NormalizedHomeState } from './home'
  *
  * Undo/redo is snapshot-based: every undoable mutation clones the whole home.
  * Depth-capped (SH3D keeps full history; 100 is ample for equivalence runs).
+ *
+ * The SH3D top-camera follower runs after every content change (apply/undo/
+ * redo) — HomeController3D$TopCameraState parity. It skips camera-only
+ * mutations, so explicit moves are never fought; writes are non-undoable
+ * (camera placement is not an undoable edit in SH3D either).
  */
 export class HomeStore {
   static readonly MAX_UNDO_DEPTH = 100
@@ -29,27 +35,33 @@ export class HomeStore {
    * the redo stack.
    */
   apply(mutate: (draft: NormalizedHomeState) => void): void {
-    const draft = structuredClone(this.home)
+    const previous = this.home
+    const draft = structuredClone(previous)
     mutate(draft)
-    this.undoStack.push(this.home)
+    this.undoStack.push(previous)
     if (this.undoStack.length > HomeStore.MAX_UNDO_DEPTH) this.undoStack.shift()
     this.redoStack = []
     this.home = draft
+    followTopCamera(this.home, previous)
   }
 
   undo(): boolean {
     const previous = this.undoStack.pop()
     if (!previous) return false
-    this.redoStack.push(structuredClone(this.home))
+    const current = this.home
+    this.redoStack.push(structuredClone(current))
     this.home = previous
+    followTopCamera(this.home, current)
     return true
   }
 
   redo(): boolean {
     const next = this.redoStack.pop()
     if (!next) return false
-    this.undoStack.push(structuredClone(this.home))
+    const current = this.home
+    this.undoStack.push(structuredClone(current))
     this.home = next
+    followTopCamera(this.home, current)
     return true
   }
 
@@ -64,6 +76,7 @@ export class HomeStore {
   /**
    * Mutates view-ish state (e.g. activeTool) WITHOUT recording an undo step —
    * tool switches are not document edits (SH3D mode changes are not undoable).
+   * Deliberately does NOT run the top-camera follower (not a content change).
    */
   patchNonUndoable(mutate: (draft: NormalizedHomeState) => void): void {
     mutate(this.home)
@@ -74,7 +87,10 @@ export class HomeStore {
     return `${prefix}-${this.idCounter++}`
   }
 
-  /** new_home semantics: reset to empty AND clear undo/redo + id counter. */
+  /** new_home semantics: reset to empty AND clear undo/redo + id counter.
+   * SH3D NEW_HOME installs a brand-new default top camera — no follower run
+   * (createEmptyHome already carries it); orbiting would wrongly preserve the
+   * old distance. */
   resetToEmpty(): void {
     this.home = createEmptyHome()
     this.undoStack = []
