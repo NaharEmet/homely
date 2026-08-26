@@ -22,20 +22,24 @@ re-explore the SH3D source before reading it.
 |--------|-------|------|-----------|-------|------------|--------|-------|
 | D0 | repo-init | — | repo root | grace | grace | done | git, skeleton, toolchain |
 | D1 | contracts | D0 | docs/ | grace | grace | done | schema+protocol+arch map |
-| A1 | driver-boot | D1 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 9/9 PASS; see ticket README |
-| A2 | driver-interact | A1 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 26/26 PASS; 4-wall room + undo/redo/copy/paste verified; screenshot via debug_screenshot |
-| A3 | driver-state | A2 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 46/46 PASS; full schema export validated 11x jsonschema; steward lifecycle backfilled OK |
-| A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | driver-dev | review | smoke 63/63 PASS; plan+3d captures byte-identical; save/open round-trip stable |
-| B1 | homely-scaffold | D1 | homely/ | clone-dev | clone-dev | review | 3650f6b build+test+smoke+tauri dev window verified |
-| B2 | homely-core | B1 | homely/src/core | clone-dev | clone-dev | review | 0294efd 44/44 tests, adversarial review 10/10 findings fixed, harness equivalence 22/22+21/21, add_furniture deviation noted in docs/behaviours |
-| B3 | plan-view | B2 | homely/src/plan | clone-dev | clone-dev | review | e04c399 84/84 tests incl equivalence script vs create_room.yaml graph, magnetism+chaining+dbl-close+escape SH3D semantics |
-| B4 | view3d | B2 | homely/src/view3d | clone-dev | clone-dev | review | 58/58 tests (14 view3d), eslint clean, vite build ok; SH3D-exact cameras (world=(x,h,y), rotY(π−yaw)·RotX(−pitch)), live store sync, set_camera/camera_preset; project-wide tsc/lint still blocked by B3 WIP |
-| B5 | homely-capture | B2 | homely/src/automation | clone-dev | clone-dev | review | f023353 24/24 capture+handshake green (55/55 total), eslint clean; deterministic offscreen screenshot plan/3d, CaptureService + 10 tests; folded B3's broken-HEAD handler fixes (value import PlanEngine, handshake 15-cmd array) — residual B3 WIP untouched in worktree |
-| C1 | dsl | D1 | equivalence/eq/dsl | harness-dev | harness-dev | review | 19 pytest pass; ruff clean |
-| C2 | orchestrator | C1 | equivalence/eq/adapters | harness-dev | harness-dev | review | mock+ws/tcp server+lockstep runner+ledger; 21 pytest pass; demo writes repo-root results/ (add /results/ to .gitignore?) |
-| C3 | comparators | C2 | equivalence/eq/comparators | harness-dev | harness-dev | review | deep-diff tolerances + ledger id-matching + geometry metrics + assertion eval + comparison.json; 21 pytest pass (61 total); ruff clean |
-| C4 | reporting-cli | C2 | equivalence/eq/reporting | harness-dev | harness-dev | review | run_suite+summary.json+report.md L0-2 + ./test-equivalence wrapper (--level/--target); 12 pytest pass (73 total); ruff clean |
-| C5 | visual-diff | C2,A4,B5 | equivalence/eq/comparators | harness-dev | | todo | waits on captures |
+| A1 | driver-boot | D1 | equivalence/driver-java | driver-dev | | done | smoke 9/9 PASS; see ticket README; 2026-08-26 integrator re-verify PASS |
+| A2 | driver-interact | A1 | equivalence/driver-java | driver-dev | | done | smoke 26/26 PASS; 4-wall room + undo/redo/copy/paste verified; screenshot via debug_screenshot |
+| A3 | driver-state | A2 | equivalence/driver-java | driver-dev | | done | smoke 46/46 PASS; full schema export validated 11x jsonschema; steward lifecycle backfilled OK |
+| A4 | driver-capture-io | A2 | equivalence/driver-java | driver-dev | | done | smoke 63/63 PASS (re-run live 2026-08-26); plan+3d captures byte-identical; save/open round-trip stable |
+| B1 | homely-scaffold | D1 | homely/ | clone-dev | | done | 3650f6b build+test+smoke+tauri dev window verified; 2026-08-26 cargo build + tauri dev window re-verified on :1 |
+| B2 | homely-core | B1 | homely/src/core | clone-dev | | done | 0294efd 44/44 tests, adversarial review 10/10 findings fixed, harness equivalence 22/22+21/21, add_furniture deviation noted in docs/behaviours |
+| B3 | plan-view | B2 | homely/src/plan | clone-dev | | done | e04c399 84/84 tests incl equivalence script vs create_room.yaml graph, magnetism+chaining+dbl-close+escape SH3D semantics |
+| B4 | view3d | B2 | homely/src/view3d | clone-dev | | done | 58/58 tests (14 view3d), eslint clean, vite build ok; SH3D-exact cameras (world=(x,h,y), rotY(π−yaw)·RotX(−pitch)), live store sync, set_camera/camera_preset; project-wide tsc green as of 2026-08-26 (earlier "blocked by B3 WIP" note stale) |
+| B5 | homely-capture | B2 | homely/src/automation | clone-dev | | done | f023353 capture tests green; deterministic offscreen screenshot plan/3d, CaptureService + 10 tests; folded B3's broken-HEAD handler fixes (value import PlanEngine, handshake 15-cmd array) |
+| C1 | dsl | D1 | equivalence/eq/dsl | harness-dev | | done | 19 pytest pass; ruff clean |
+| C2 | orchestrator | C1 | equivalence/eq/adapters | harness-dev | | done | mock+ws/tcp server+lockstep runner+ledger; demo run ok=True (2026-08-26); /results/ now gitignored |
+| C3 | comparators | C2 | equivalence/eq/comparators | harness-dev | | done | deep-diff tolerances + ledger id-matching + geometry metrics + assertion eval + comparison.json; ruff clean |
+| C4 | reporting-cli | C2 | equivalence/eq/reporting | harness-dev | | done | run_suite+summary.json+report.md L0-2 + ./test-equivalence wrapper (--level/--target); 73/73 pytest total (2026-08-26); ruff clean |
+| C5 | visual-diff | C2,A4,B5 | equivalence/eq/comparators | harness-dev | | todo | UNBLOCKED (deps done 2026-08-26). DoD needs only a known-different PNG pair — no live apps required |
+| C6 | live-adapters | C2,A3,B1 | equivalence/eq/adapters | harness-dev | | todo | W3 finding: runner is mock-only. Need Sh3dAdapter (TCP client → running FramedServer: reads hello, newline-JSON envelopes) + HomelyAdapter (wrap AutomationServer WS Session after hello) behind the Adapter ABC |
+| C7 | runner-live | C6 | equivalence/eq/reporting | harness-dev | | todo | Wire --live path: start AutomationServer (ephemeral ports), wait_for_session(sh3d-driver/homely), build {sh3d,tauri} adapters, run Orchestrator; document app launch (driver ./run.sh <port>; HOMELY_AUTOMATION_PORT=<ws-port> for tauri dev). Exit criteria: create_room.yaml passes vs both real apps |
+| D2 | golden-and-slice | C7 | equivalence/scenarios/slice | grace | | todo | vertical slice YAMLs under equivalence/scenarios/slice/; golden .sh3d via driver + committed expected-state JSONs; DoD: ./test-equivalence slice/create_room end-to-end both apps |
+| D3 | docs-matrix | D2 | equivalence/matrix | grace | | todo | features.yaml seeded from scenario inventory; agent handbook; behaviour-notes template |
 
 ## Sequencing waves
 
