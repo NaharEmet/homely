@@ -25,6 +25,7 @@ from eq.comparators.metrics import (
     wall_length,
 )
 from eq.comparators.run import compare_artifacts, write_comparison
+from eq.comparators.visual import VisualResult, compare_images
 
 __all__ = [
     "ANGLE_TOLERANCE",
@@ -34,8 +35,10 @@ __all__ = [
     "RADIAN_TOLERANCE",
     "Failure",
     "IdMap",
+    "VisualResult",
     "build_id_map",
     "compare_artifacts",
+    "compare_images",
     "compare_states",
     "deep_diff",
     "evaluate_assertion",

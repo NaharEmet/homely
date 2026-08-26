@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pytest
+from PIL import Image, ImageDraw
 
 from eq.adapters import Orchestrator, build_mock_adapters
 from eq.comparators import (
     IdMap,
+    VisualResult,
     build_id_map,
     compare_artifacts,
+    compare_images,
     compare_states,
     deep_diff,
     evaluate_assertion,
@@ -359,3 +364,70 @@ def test_idmap_inverse_helpers_and_lookup():
     assert id_map.lookup_level_ref("lb") == "la"
     assert id_map.lookup_level_ref(None) is None
     assert id_map.lookup_level_ref("unknown") == "unknown"
+
+
+# -------------------------------------------------------------------- visual
+
+
+def _png(extra=None):
+    """Known-different PNG pair: plain white vs white with a red 8x8 block."""
+    image = Image.new("RGB", (32, 16), "white")
+    if extra:
+        ImageDraw.Draw(image).rectangle((4, 4, 11, 11), fill="red")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+KNOWN_SAME = (_png(), _png())
+KNOWN_DIFFERENT = (_png(), _png(extra=True))
+
+
+def test_visual_diff_identical_pair_matches():
+    result = compare_images(*KNOWN_SAME)
+    assert isinstance(result, VisualResult)
+    assert result.matched is True
+    assert result.score == 0.0
+    assert result.differentPixels == 0
+    assert result.totalPixels == 32 * 16
+    assert result.maxDelta == 0
+    assert result.to_dict()["matched"] is True
+
+
+def test_visual_diff_known_different_pair_scores_and_heatmaps(tmp_path):
+    diff_path = tmp_path / "diff.png"
+    result = compare_images(*KNOWN_DIFFERENT, diff_path=diff_path)
+    assert result.matched is False
+    assert result.differentPixels == 64
+    assert result.score == pytest.approx(64 / (32 * 16))
+    assert result.maxDelta > 0
+    heatmap = Image.open(diff_path).convert("RGB")
+    assert heatmap.size == (32, 16)
+    pixels = set(map(tuple, np.asarray(heatmap).reshape(-1, 3)))
+    assert (255, 0, 0) in pixels
+    assert (255, 255, 255) in pixels
+
+
+def test_visual_diff_threshold_breach_flips_verdict():
+    score = compare_images(*KNOWN_DIFFERENT).score
+    assert compare_images(*KNOWN_DIFFERENT, threshold=score + 0.01).matched is True
+    assert compare_images(*KNOWN_DIFFERENT, threshold=score - 0.01).matched is False
+
+
+def test_visual_diff_pixel_tolerance_absorbs_small_deltas():
+    base = _png()
+    shifted = Image.new("RGB", (32, 16), (251, 251, 251))
+    buffer = io.BytesIO()
+    shifted.save(buffer, format="PNG")
+    assert compare_images(base, buffer.getvalue(), pixel_tolerance=4).matched is True
+    assert compare_images(base, buffer.getvalue()).matched is False
+
+
+def test_visual_diff_size_mismatch_never_matches(tmp_path):
+    tall = Image.new("RGB", (32, 32), "white")
+    buffer = io.BytesIO()
+    tall.save(buffer, format="PNG")
+    result = compare_images(KNOWN_SAME[0], buffer.getvalue())
+    assert result.matched is False
+    assert result.sizeMismatch is True
+    assert result.maxDelta is None
