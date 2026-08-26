@@ -1,0 +1,96 @@
+# features.yaml — feature matrix seeded from scenario inventory
+# Maps each scenario to the frozen contracts it exercises and the
+# tickets that implemented the tested behaviour.  The harness runner
+# selects scenarios by name (--target os,mode filters further).
+#
+# Columns:
+#   name          scenario name (directory under equivalence/scenarios/)
+#   file          YAML path relative to repo root
+#   description   one-line summary
+#   target        {os,mode} constraints
+#   contracts     frozen contract files exercised (read-only refs)
+#   tickets       board tickets whose behaviour this scenario verifies
+#   assertions    summary of what the scenario asserts
+#   notes         known limitations or future work
+
+scenarios:
+  - name: create_room
+    file: equivalence/scenarios/slice/create_room.yaml
+    description: >
+      Four-wall rectangular room via wall tool click chain, closing wall
+      committed by plain click on start, validate via bare double-click.
+      SH3D parity: NO room auto-created on loop close.
+    target:
+      os: [linux]
+      mode: [tauri]
+    contracts:
+      - docs/schema/home-project.schema.json
+      - docs/specs/ws-protocol.md
+      - docs/behaviours/sh3d-plan-tool-behaviours.md
+      - docs/behaviours/sh3d-camera-and-export.md
+    tickets:
+      - D2   # golden-and-slice (E2E scenario + golden)
+      - B6   # plan-parity-autoroom (no room on loop close)
+      - B7   # top-camera-follower (camera moves per click)
+      - B8   # export-parity-defaults (thickness, patternId, wallsAlpha, compass, camera ids, rounding)
+      - B9   # wall-id-draw-order (per-click addWall, ids in draw order)
+      - C7   # runner-live (live E2E orchestrator)
+      - C8   # comparator-null-normalize (absent==null)
+      - C9   # baseline-after-setup (ledger fix)
+    assertions:
+      - path: walls
+        kind: count
+        value: 4
+        at: step 8
+    notes: >
+      This is the sole E2E vertical slice. The 4-wall recipe
+      (click ×5 + dbl) matches the SH3D PlanController close sequence
+      documented in sh3d-plan-tool-behaviours.md §3. Golden expected-state
+      was captured from the real Java driver on port 9450.
+
+  - name: create_room_legacy
+    file: equivalence/scenarios/walls/create_room.yaml
+    description: >
+      Legacy scenario (pre-B6): same 4-wall chain but asserts room auto-creation.
+      DEPRECATED — kept as a regression reference only. Will fail vs current clone
+      because B6 removed room auto-creation.
+    target:
+      os: [linux]
+      mode: [tauri]
+    contracts:
+      - docs/schema/home-project.schema.json
+    tickets:
+      - B3   # plan-view (initial wall tool)
+    assertions:
+      - path: walls
+        kind: count
+        value: 4
+        at: step 7
+      - path: rooms
+        kind: exists
+        at: step 7
+    notes: >
+      DEPRECATED — room assertion contradicts B6/SH3D parity. Retained to
+      verify that the old behaviour (room auto-creation) no longer occurs.
+      If run, expect the rooms assertion to FAIL.
+
+# Contract coverage matrix
+# ========================
+#
+# docs/schema/home-project.schema.json
+#   Validated by: A3 (driver-state), B2 (homely-core export), D2 (E2E)
+#
+# docs/specs/ws-protocol.md
+#   Used by: A1 (driver-boot hello), B1 (homely-scaffold hello),
+#            C6 (live-adapters), C7 (runner-live)
+#
+# docs/behaviours/sh3d-plan-tool-behaviours.md
+#   Verified by: A2 (driver-interact), B3 (plan-view), B6 (no auto-room),
+#                B9 (per-click addWall), D2 (E2E)
+#
+# docs/behaviours/sh3d-camera-and-export.md
+#   Verified by: B7 (camera follower), B8 (export defaults + rounding),
+#                D2 (E2E)
+#
+# docs/architecture-map.md
+#   Reference for: all tickets (read before implementing)
