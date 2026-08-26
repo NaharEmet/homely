@@ -20,6 +20,8 @@ export class HomeStore {
   private undoStack: NormalizedHomeState[] = []
   private redoStack: NormalizedHomeState[] = []
   private idCounter = 1
+  private compoundDepth = 0
+  private compoundBase: NormalizedHomeState | null = null
 
   /**
    * timeZoneId feeds the compass location default (SH3D reads the OS zone);
@@ -46,11 +48,47 @@ export class HomeStore {
     const previous = this.home
     const draft = structuredClone(previous)
     mutate(draft)
+    if (this.compoundDepth > 0) {
+      // Inside a compound edit: state advances now (so per-item followers run
+      // event-by-event) but the single undo push waits for endCompoundEdit.
+      this.home = draft
+      followTopCamera(this.home, previous)
+      return
+    }
     this.undoStack.push(previous)
     if (this.undoStack.length > HomeStore.MAX_UNDO_DEPTH) this.undoStack.shift()
     this.redoStack = []
     this.home = draft
     followTopCamera(this.home, previous)
+  }
+
+  /**
+   * Opens a compound edit (SH3D undoSupport.beginUpdate parity): applies made
+   * until the matching endCompoundEdit() collapse into ONE undo step, sealed
+   * only if something actually changed. The top-camera follower still runs on
+   * every inner apply, so intermediate placements match SH3D's per-event
+   * behavior while undo/redo stay coarse-grained.
+   */
+  beginCompoundEdit(): void {
+    if (this.compoundDepth === 0) this.compoundBase = this.home
+    this.compoundDepth++
+  }
+
+  endCompoundEdit(): void {
+    if (this.compoundDepth === 0) {
+      throw new Error('endCompoundEdit without matching beginCompoundEdit')
+    }
+    this.compoundDepth--
+    if (this.compoundDepth > 0) return
+    const base = this.compoundBase
+    this.compoundBase = null
+    // patchNonUndoable-only batches mutate home in place (same reference);
+    // reference equality means nothing undoable happened — no history entry.
+    if (base !== null && this.home !== base) {
+      this.undoStack.push(base)
+      if (this.undoStack.length > HomeStore.MAX_UNDO_DEPTH) this.undoStack.shift()
+      this.redoStack = []
+    }
   }
 
   undo(): boolean {
@@ -104,5 +142,9 @@ export class HomeStore {
     this.undoStack = []
     this.redoStack = []
     this.idCounter = 1
+    // A drawing session open across automation commands is discarded with
+    // the rest of the document — never sealed onto the fresh undo stack.
+    this.compoundDepth = 0
+    this.compoundBase = null
   }
 }

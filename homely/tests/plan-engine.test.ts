@@ -50,8 +50,12 @@ describe('wall tool state machine', () => {
     click(0, 0)
     expect(engine.getPreview().phase).toBe('drawing')
     click(100, 0)
+    // SH3D WallDrawingState: each wall enters the home AT ITS CLICK
+    // (the top camera moves on the second click — first wall committed).
+    expect(store.getHome().walls).toHaveLength(1)
     click(100, 80)
-    expect(engine.getPreview().pendingWalls).toHaveLength(2)
+    expect(store.getHome().walls).toHaveLength(2)
+    expect(engine.getPreview().pendingWalls).toHaveLength(0)
 
     engine.key('escape')
     expect(engine.getPreview()).toMatchObject({ phase: 'idle', pendingWalls: [], chainStart: null })

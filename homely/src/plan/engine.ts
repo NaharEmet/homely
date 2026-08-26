@@ -1,5 +1,6 @@
 import type { HomeModel } from '../core/model'
-import { ModelError } from '../core/model'
+import { ModelError, NEW_WALL_PATTERN_ID, NEW_WALL_THICKNESS_CM } from '../core/model'
+import { DEFAULT_WALL_HEIGHT_CM } from '../core/home'
 import type { NormalizedHomeState } from '../core/home'
 import { wallPointMagnetism } from './magnetism'
 import {
@@ -63,7 +64,9 @@ export class PlanEngine {
   private magnetismEnabled = true
   private phase: 'idle' | 'drawing' = 'idle'
   private chainStart: Point | null = null
-  private segments: Array<Segment> = []
+  /** Walls already committed to the home during the open drawing session. */
+  private chainIds: Array<string> = []
+  private sessionOpen = false
 
   constructor(model: HomeModel) {
     this.model = model
@@ -101,7 +104,9 @@ export class PlanEngine {
       tool: this.tool,
       phase: this.phase,
       chainStart: this.chainStart,
-      pendingWalls: this.segments.map((s) => ({ ...s })),
+      // Walls enter the home at each click (SH3D WallDrawingState), so the
+      // renderer draws them from the store snapshot; nothing stays pending.
+      pendingWalls: [],
     }
   }
 
@@ -210,9 +215,14 @@ export class PlanEngine {
 
     if (this.phase === 'idle') {
       const start = this.resolveChainStart(point)
+      // SH3D parity: the whole drawing session is ONE compound undo edit
+      // posted at validateDrawnWalls, while each wall enters the home AT ITS
+      // CLICK (the top camera moves on click 2 — first wall committed then).
+      this.model.getStore().beginCompoundEdit()
+      this.sessionOpen = true
+      this.chainIds = []
       this.model.setSelection([])
       this.chainStart = start
-      this.segments = []
       this.phase = 'drawing'
       return
     }
@@ -220,7 +230,7 @@ export class PlanEngine {
     const start = this.chainStart!
     const end = this.resolveSegmentEnd(start, point)
     if (distance(start, end) <= 0) return
-    this.segments.push({ start, end })
+    this.commitChainWall(start, end)
     this.chainStart = end
   }
 
@@ -229,32 +239,39 @@ export class PlanEngine {
     const start = this.chainStart!
     const end = this.resolveSegmentEnd(start, point)
     if (distance(start, end) > 0) {
-      this.segments.push({ start, end })
+      // joinNewWallEndToWall: the closing piece from the last wall's end.
+      this.commitChainWall(start, end)
     }
     this.validateDrawnWalls()
   }
 
+  private commitChainWall(start: Point, end: Point): void {
+    const wall = this.model.addWall({
+      xStart: start.x,
+      yStart: start.y,
+      xEnd: end.x,
+      yEnd: end.y,
+      thickness: NEW_WALL_THICKNESS_CM,
+      height: DEFAULT_WALL_HEIGHT_CM,
+      patternId: NEW_WALL_PATTERN_ID,
+    })
+    this.chainIds.push(wall.id)
+  }
+
   /**
-   * Commits accumulated segments as ONE undoable compound operation,
-   * mirroring SH3D PlanController.validateDrawnWalls/postCreateWalls.
+   * Seals the drawing session as ONE compound undo edit and selects its walls
+   * (SH3D PlanController.java:10912); rooms come ONLY from the room tool.
    */
   private validateDrawnWalls(): void {
-    const segments = this.segments
-    this.segments = []
+    const ids = this.chainIds
+    this.chainIds = []
     this.chainStart = null
     this.phase = 'idle'
-    if (segments.length === 0) return
-
-    // SH3D parity: validateDrawnWalls only posts + selects the walls
-    // (PlanController.java:10912); rooms come ONLY from the room tool.
-    this.model.addWallChain(
-      segments.map((segment) => ({
-        xStart: segment.start.x,
-        yStart: segment.start.y,
-        xEnd: segment.end.x,
-        yEnd: segment.end.y,
-      })),
-    )
+    if (ids.length > 0) this.model.setSelection(ids)
+    if (this.sessionOpen) {
+      this.model.getStore().endCompoundEdit()
+      this.sessionOpen = false
+    }
   }
 
   /**
@@ -294,6 +311,8 @@ export class PlanEngine {
     let bestDist = margin
     const candidates: Array<{ p: Point; occupied: boolean }> = []
     for (const wall of home.walls) {
+      // Committed walls (including ones from the open drawing session) are
+      // join targets exactly like SH3D, where drawn walls live in the home.
       candidates.push(
         {
           p: { x: wall.xStart, y: wall.yStart },
@@ -304,12 +323,6 @@ export class PlanEngine {
           occupied: this.hasOtherWallAt(home, wall.id, { x: wall.xEnd, y: wall.yEnd }),
         },
       )
-    }
-    // Pending (not yet committed) chain segments are always joinable —
-    // SH3D materializes them into the home during drawing, so closing a
-    // loop by double-click lands exactly on the chain's first point.
-    for (const segment of this.segments) {
-      candidates.push({ p: segment.start, occupied: false }, { p: segment.end, occupied: false })
     }
     for (const candidate of candidates) {
       if (candidate.occupied) continue
