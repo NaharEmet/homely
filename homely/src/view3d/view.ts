@@ -2,15 +2,30 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { HomeModel } from '../core/model'
 import { HomeStore } from '../core/store'
+import { DEFAULT_WALL_HEIGHT_CM } from '../core/home'
 import { CameraDirector, type CameraPatch, type CameraPresetName } from './cameras'
-import { buildScene } from './scene'
+import { buildScene, type ModelUrlResolver } from './scene'
 import { observeStore } from './watch'
+import { computeHomeBounds } from '../core/top-camera-follower'
+import {
+  DEFAULT_VIEWPORT_QUALITY,
+  loadViewportQuality,
+  saveViewportQuality,
+  type ViewportQuality,
+} from './viewport-quality'
 
 export interface View3DOptions {
   /** DOM container; when absent the view stays a headless scene graph. */
   container?: HTMLElement
   width?: number
   height?: number
+  /** Initial viewport quality; defaults to the persisted setting. */
+  quality?: ViewportQuality
+  /**
+   * Resolve a furniture modelPath to a fetchable URL. Defaults to bundled
+   * `assets/<path>`; pass a resolver that maps user blob keys to blob URLs.
+   */
+  modelUrlResolver?: ModelUrlResolver
 }
 
 /**
@@ -28,35 +43,53 @@ export class View3D {
   private controls: OrbitControls | undefined
   private readonly unobserve: () => void
   private _isFirstBuild = true
+  private _lastSelectionKey = ''
   private _animationFrame: number | undefined
+  private readonly resizeObserver?: ResizeObserver
   private readonly handleResize = (): void => {
     const container = this.domElement?.parentElement
     if (!container) return
     this.resizeTo(container.clientWidth || 800, container.clientHeight || 600)
   }
+  private _quality: ViewportQuality
+  private readonly modelUrlResolver: ModelUrlResolver
 
   constructor(
     private readonly store: HomeStore,
     options: View3DOptions = {},
   ) {
     this.director = new CameraDirector(store, new HomeModel(store))
-    this._scene = buildScene(store.getHome())
+    this.modelUrlResolver = options.modelUrlResolver ?? ((path: string) => `assets/${path}`)
+    this._scene = buildScene(store.getHome(), { modelUrlResolver: this.modelUrlResolver })
     this.perspectiveCamera = new THREE.PerspectiveCamera(63, 4 / 3, 1, 500_000)
     this.perspectiveCamera.rotation.order = 'YXZ'
-    this.unobserve = observeStore(store, () => this.rebuild())
+    this.unobserve = observeStore(store, () => this.onStoreChanged())
     this.syncCamera()
+
+    // Persisted quality when the caller didn't supply one.
+    let stored: ViewportQuality | undefined
+    try {
+      stored = loadViewportQuality()
+    } catch {
+      stored = undefined
+    }
+    this._quality = options.quality ?? stored ?? { ...DEFAULT_VIEWPORT_QUALITY }
 
     const container = options.container
     if (container) {
       const width = options.width ?? (container.clientWidth || 800)
       const height = options.height ?? (container.clientHeight || 600)
-      const renderer = new THREE.WebGLRenderer({ antialias: true })
-      renderer.setPixelRatio(1)
+      const renderer = new THREE.WebGLRenderer({
+        antialias: this._quality.antialias,
+        powerPreference: 'high-performance',
+      })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this._quality.pixelRatioCap))
       renderer.setSize(width, height)
       renderer.shadowMap.enabled = true
       renderer.shadowMap.type = THREE.PCFSoftShadowMap
       container.appendChild(renderer.domElement)
       this.renderer = renderer
+      this.applyQualityToScene()
 
       this.controls = new OrbitControls(this.perspectiveCamera, renderer.domElement)
       this.controls.enableDamping = true
@@ -65,8 +98,22 @@ export class View3D {
       this.controls.minDistance = 50
       this.controls.maxDistance = 50_000
       this.controls.update()
+      // Drive redraws from control interaction. Must NOT call render() here:
+      // render() draws, the loop below calls update(); update() dispatches
+      // 'change', so calling render() from this handler would recurse forever.
+      this.controls.addEventListener('change', () => this.startAnimationLoop())
 
       window.addEventListener('resize', this.handleResize)
+
+      // Resize the canvas whenever the container box changes — covers divider
+      // drags, panel show/hide, catalog collapse, and window resize in one
+      // place instead of wiring every layout change through the app shell.
+      this.resizeObserver = new ResizeObserver(() => {
+        const w = container.clientWidth || 800
+        const h = container.clientHeight || 600
+        this.resizeTo(w, h)
+      })
+      this.resizeObserver.observe(container)
     }
   }
 
@@ -85,11 +132,19 @@ export class View3D {
     if (this.controls) {
       this.cancelAnimation()
       const targetPos = new THREE.Vector3(cam.x, cam.z, cam.y)
-      const targetLook = new THREE.Vector3(0, 0, 0)
+      // Orbit around the home's bounds center (plan x,y → world x,z; height → y).
+      // Keeps the house framed for both presets, including the top camera which
+      // follows content in the store but would otherwise look at the origin.
+      const bounds = computeHomeBounds(this.store.getHome())
+      const center = new THREE.Vector3(
+        (bounds.minX + bounds.maxX) / 2,
+        (bounds.minZ + bounds.maxZ) / 2,
+        (bounds.minY + bounds.maxY) / 2,
+      )
 
       this.controls.enableDamping = false
       this.perspectiveCamera.position.copy(targetPos)
-      this.controls.target.copy(targetLook)
+      this.controls.target.copy(center)
       this.controls.update()
       this.controls.enableDamping = true
     } else {
@@ -112,6 +167,50 @@ export class View3D {
     this.render()
   }
 
+  /** Current viewport quality settings. */
+  get quality(): ViewportQuality {
+    return { ...this._quality }
+  }
+
+  /**
+   * Apply a viewport quality preset live. Persists the choice; affects the
+   * renderer pixel ratio, shadow map resolution, fog, and (on rebuild) texture
+   * anisotropy. Antialias changes need a new context, so they apply on the
+   * next full page/view recreation — everything else is immediate.
+   */
+  applyQuality(quality: ViewportQuality): void {
+    this._quality = { ...quality }
+    try {
+      saveViewportQuality(this._quality)
+    } catch {
+      // Persistence is best-effort.
+    }
+    if (!this.renderer) return
+    const cap = this._quality.pixelRatioCap
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap))
+    this.applyQualityToScene()
+    this.render()
+  }
+
+  private applyQualityToScene(): void {
+    if (!this.renderer) return
+    this.renderer.shadowMap.enabled = true
+    const size = this._quality.shadowMapSize
+    this._scene.traverse((object) => {
+      if ((object as THREE.DirectionalLight).isDirectionalLight) {
+        const light = object as THREE.DirectionalLight
+        light.shadow.mapSize.set(size, size)
+        // Force reallocation of the shadow map at the new resolution.
+        if (light.shadow.map) light.shadow.map.dispose()
+        light.shadow.map = null
+      }
+    })
+    // Fog density: 0 disables fog, >0 uses FogExp2.
+    this._scene.fog = this._quality.fogDensity > 0
+      ? new THREE.FogExp2(this._scene.background instanceof THREE.Color ? this._scene.background : 0xcce4fc, this._quality.fogDensity)
+      : null
+  }
+
   /** Rebuild the whole scene graph from current store state. */
   rebuild(): void {
     let savedTarget: THREE.Vector3 | undefined
@@ -123,7 +222,8 @@ export class View3D {
     }
 
     this.disposeSceneObjects(this._scene)
-    this._scene = buildScene(this.store.getHome())
+    this._scene = buildScene(this.store.getHome(), { modelUrlResolver: this.modelUrlResolver })
+    this.applyQualityToScene()
 
     if (this.controls && savedTarget && savedPosition) {
       this.perspectiveCamera.position.copy(savedPosition)
@@ -135,15 +235,95 @@ export class View3D {
     this.render()
   }
 
+  /**
+   * Store-change entry point. Rebuilds the scene, then recenters the camera on
+   * the selection only when the selection itself changed (so orbiting/dragging,
+   * which never touches the store, never yanks the camera back).
+   */
+  private onStoreChanged(): void {
+    const home = this.store.getHome()
+    const key = [...home.selection].sort().join(',')
+    const selectionChanged = key !== this._lastSelectionKey
+    this._lastSelectionKey = key
+    this.rebuild()
+    if (selectionChanged && home.selection.length > 0) this.focusSelection()
+  }
+
+  /**
+   * Recenter the OrbitControls target on the selected furniture/walls (world
+   * centroid). Keeps the current camera offset — only the look-at point moves,
+   * so the object becomes centered without changing zoom or angle.
+   */
+  private focusSelection(): void {
+    if (!this.controls) return
+    const home = this.store.getHome()
+    const sel = new Set(home.selection)
+    const levels = new Map(home.levels.map((l) => [l.id, l.elevation]))
+    const elevOf = (ref?: string | null): number =>
+      ref ? levels.get(ref) ?? 0 : 0
+
+    const points: THREE.Vector3[] = []
+    for (const item of home.furniture) {
+      if (!sel.has(item.id) || item.visible === false) continue
+      points.push(
+        new THREE.Vector3(
+          item.x,
+          elevOf(item.levelRef) + (item.elevation ?? 0) + item.height / 2,
+          item.y,
+        ),
+      )
+    }
+    for (const w of home.walls) {
+      if (!sel.has(w.id)) continue
+      const h = w.height ?? DEFAULT_WALL_HEIGHT_CM
+      points.push(
+        new THREE.Vector3(
+          (w.xStart + w.xEnd) / 2,
+          elevOf(w.levelRef) + h / 2,
+          (w.yStart + w.yEnd) / 2,
+        ),
+      )
+    }
+    if (points.length === 0) return
+
+    const center = new THREE.Vector3()
+    for (const p of points) center.add(p)
+    center.multiplyScalar(1 / points.length)
+
+    const offset = this.perspectiveCamera.position.clone().sub(this.controls.target)
+    this.perspectiveCamera.position.copy(center.clone().add(offset))
+    this.controls.target.copy(center)
+    this.controls.update()
+    this.startAnimationLoop()
+  }
+
+  /** Draw the current scene. Does NOT advance controls (that's the loop). */
   render(): void {
-    this.controls?.update()
     this.renderer?.render(this._scene, this.perspectiveCamera)
+  }
+
+  /**
+   * Run the render loop while OrbitControls is animating (inertia/damping).
+   * update() is the ONLY place controls advance; it dispatches 'change', which
+   * calls startAnimationLoop() — but the guard makes that a no-op while a frame
+   * is already queued, so there is no recursion.
+   */
+  private startAnimationLoop(): void {
+    if (this._animationFrame !== undefined) return
+    const tick = (): void => {
+      this._animationFrame = undefined
+      const moving = this.controls ? this.controls.update() : false
+      this.renderer?.render(this._scene, this.perspectiveCamera)
+      if (moving) this._animationFrame = requestAnimationFrame(tick)
+    }
+    this._animationFrame = requestAnimationFrame(tick)
   }
 
   dispose(): void {
     this.cancelAnimation()
     this.unobserve()
     this.controls?.dispose()
+    this.resizeObserver?.disconnect()
     if (this.renderer) window.removeEventListener('resize', this.handleResize)
     this.disposeSceneObjects(this._scene)
     this.renderer?.dispose()

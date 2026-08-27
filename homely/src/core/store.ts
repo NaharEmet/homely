@@ -147,4 +147,35 @@ export class HomeStore {
     this.compoundDepth = 0
     this.compoundBase = null
   }
+
+  /**
+   * Replace the entire document (open/save round-trip). Clears undo/redo and
+   * reseeds the id counter past any numeric suffixes already present so
+   * subsequent creates never collide with loaded ids.
+   */
+  loadHome(home: NormalizedHomeState): void {
+    this.home = structuredClone(home)
+    this.undoStack = []
+    this.redoStack = []
+    this.compoundDepth = 0
+    this.compoundBase = null
+    this.idCounter = this.maxExistingId(this.home) + 1
+  }
+
+  private maxExistingId(home: NormalizedHomeState): number {
+    let max = 0
+    const all = [
+      ...home.levels,
+      ...home.walls,
+      ...home.rooms,
+      ...home.furniture,
+      ...home.dimensionLines,
+      ...home.labels,
+    ]
+    for (const item of all) {
+      const match = /-(\d+)$/.exec(item.id)
+      if (match) max = Math.max(max, Number(match[1]))
+    }
+    return max
+  }
 }

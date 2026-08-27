@@ -73,8 +73,10 @@ class Session:
 class AutomationServer:
     """Listens on ephemeral WebSocket + TCP ports until `stop()`."""
 
-    def __init__(self, host: str = "127.0.0.1"):
+    def __init__(self, host: str = "127.0.0.1", ws_port: int | None = None, tcp_port: int | None = None):
         self.host = host
+        self._ws_port = ws_port
+        self._tcp_port = tcp_port
         self.ws_port: int | None = None
         self.tcp_port: int | None = None
         self.sessions: dict[str, Session] = {}
@@ -82,10 +84,10 @@ class AutomationServer:
         self._tcp_server = None
 
     async def start(self) -> None:
-        self._ws_server = await serve(self._handle_ws, self.host, 0)
+        self._ws_server = await serve(self._handle_ws, self.host, self._ws_port or 0)
         sock = self._ws_server.sockets[0]
         self.ws_port = sock.getsockname()[1]
-        self._tcp_server = await asyncio.start_server(self._handle_tcp, self.host, 0)
+        self._tcp_server = await asyncio.start_server(self._handle_tcp, self.host, self._tcp_port or 0)
         self.tcp_port = self._tcp_server.sockets[0].getsockname()[1]
 
     async def stop(self) -> None:

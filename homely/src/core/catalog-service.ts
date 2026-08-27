@@ -30,7 +30,8 @@ export async function loadCatalogFromUrl(url: string): Promise<CatalogManifest> 
 
 /** Load the default bundled catalog (served from the Vite/Tauri bundle root). */
 export async function loadDefaultCatalog(): Promise<CatalogLoadResult> {
-  const source = 'catalog/catalog.json'
+  // Vite copies public/ to dist/ at the bundle root: /assets/catalog/catalog.json
+  const source = 'assets/catalog/catalog.json'
   const manifest = await loadCatalogFromUrl(source)
   return { catalog: new FurnitureCatalog(manifest.items), source }
 }

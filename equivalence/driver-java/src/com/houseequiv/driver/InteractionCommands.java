@@ -6,7 +6,11 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.houseequiv.driver.protocol.Dispatcher;
+import com.eteks.sweethome3d.model.CatalogPieceOfFurniture;
+import com.eteks.sweethome3d.model.FurnitureCatalog;
+import com.eteks.sweethome3d.model.FurnitureCategory;
 import com.eteks.sweethome3d.model.Home;
+import com.eteks.sweethome3d.model.HomePieceOfFurniture;
 import com.eteks.sweethome3d.model.Selectable;
 import com.eteks.sweethome3d.model.Wall;
 import com.eteks.sweethome3d.viewcontroller.PlanController;
@@ -203,6 +207,52 @@ public final class InteractionCommands {
       data.addProperty("path", path);
       data.addProperty("width", image.getWidth());
       data.addProperty("height", image.getHeight());
+      return data;
+    }));
+
+    // A5: expose SH3D's real furniture catalog over the wire.
+    dispatcher.register("list_catalog", params -> app.callOnEdt(() -> {
+      JsonArray items = new JsonArray();
+      FurnitureCatalog catalog = app.getUserPreferences().getFurnitureCatalog();
+      for (FurnitureCategory category : catalog.getCategories()) {
+        // Top-level categories only; subcategories are not modelled in SH3D 7.5.
+        for (CatalogPieceOfFurniture piece : category.getFurniture()) {
+          JsonObject item = new JsonObject();
+          item.addProperty("catalogId", piece.getId());
+          item.addProperty("name", piece.getName());
+          item.addProperty("width", round3(piece.getWidth()));
+          item.addProperty("depth", round3(piece.getDepth()));
+          item.addProperty("height", round3(piece.getHeight()));
+          item.addProperty("elevation", round3(piece.getElevation()));
+          item.addProperty("doorOrWindow", piece.isDoorOrWindow());
+          items.add(item);
+        }
+      }
+      JsonObject data = new JsonObject();
+      data.add("items", items);
+      return data;
+    }));
+
+    dispatcher.register("add_furniture", params -> app.callOnEdt(() -> {
+      String catalogId = string(params, "catalogId");
+      float x = reqFloat(params, "x");
+      float y = reqFloat(params, "y");
+      CatalogPieceOfFurniture catalogItem = findCatalogPiece(app, catalogId);
+      if (catalogItem == null) {
+        throw new IllegalArgumentException("unknown catalogId: " + catalogId);
+      }
+      HomePieceOfFurniture piece = new HomePieceOfFurniture(catalogItem);
+      // Catalog id is carried on CatalogPieceOfFurniture.getId(), not copied by
+      // the PieceOfFurniture ctor, so set it explicitly for state export.
+      piece.setCatalogId(catalogItem.getId());
+      piece.setX(x);
+      piece.setY(y);
+      if (params.has("angleDeg") && !params.get("angleDeg").isJsonNull()) {
+        piece.setAngle((float) (reqFloat(params, "angleDeg") * Math.PI / 180.0));
+      }
+      home(app).addPieceOfFurniture(piece);
+      JsonObject data = new JsonObject();
+      data.addProperty("objectId", app.ids().idFor(piece, "furniture"));
       return data;
     }));
 
@@ -499,6 +549,19 @@ public final class InteractionCommands {
     if (changed) {
       home.setSelectedItems(filtered);
     }
+  }
+
+  /** Scans the SH3D furniture catalog for a {@code CatalogPieceOfFurniture} by id. */
+  private static CatalogPieceOfFurniture findCatalogPiece(Sh3dApplication app, String catalogId) {
+    FurnitureCatalog catalog = app.getUserPreferences().getFurnitureCatalog();
+    for (FurnitureCategory category : catalog.getCategories()) {
+      for (CatalogPieceOfFurniture piece : category.getFurniture()) {
+        if (catalogId.equals(piece.getId())) {
+          return piece;
+        }
+      }
+    }
+    return null;
   }
 
   private static void clickAt(PlanController pc, float x, float y, int clicks,

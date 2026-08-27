@@ -153,6 +153,10 @@ export class HomeModel {
     return true
   }
 
+  updateLevel(id: string, patch: Partial<Omit<Level, 'id'>>): Level {
+    return this.updateIn('levels', id, patch)
+  }
+
   addWall(input: Omit<Wall, 'id'>): Wall {
     requireFinite(input.xStart, 'xStart')
     requireFinite(input.yStart, 'yStart')

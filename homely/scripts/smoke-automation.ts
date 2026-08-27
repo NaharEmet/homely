@@ -87,9 +87,18 @@ async function main(): Promise<number> {
         home.schemaVersion === 1 &&
         Array.isArray(home.levels) &&
         home.levels.length === 0 &&
-        top?.yawDeg === 180 &&
+        top?.yawDeg === -180 && // yaw pi wraps to -180 on the wire (B8 golden)
         top?.pitchDeg === 45 &&
         top?.lens === 'PINHOLE',
+    )
+
+    // Catalog commands surface over the wire when a catalog is loaded.
+    const cap2 = await orch.sendRequest('get_capabilities')
+    const commands = (cap2.data as { commands?: string[] }).commands ?? []
+    const catalogCmds = commands.filter((c) => c === 'list_catalog' || c === 'catalog_add_furniture')
+    check(
+      `get_capabilities -> catalog commands ${JSON.stringify(catalogCmds)}`,
+      commands.includes('list_catalog') && commands.includes('catalog_add_furniture'),
     )
 
     const bad = await orch.sendRequest('definitely_not_a_command')

@@ -2,6 +2,7 @@
 
 from eq.adapters.base import Adapter, AdapterError
 from eq.adapters.homely import HomelyAdapter
+from eq.adapters.luxcore import LuxCoreAdapter
 from eq.adapters.mock import MockAdapter
 from eq.adapters.orchestrator import Orchestrator, RunResult, build_mock_adapters
 from eq.adapters.server import AutomationServer, Session
@@ -12,6 +13,7 @@ __all__ = [
     "AdapterError",
     "AutomationServer",
     "HomelyAdapter",
+    "LuxCoreAdapter",
     "MockAdapter",
     "Orchestrator",
     "RunResult",

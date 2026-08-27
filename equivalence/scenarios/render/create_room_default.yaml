@@ -1,0 +1,27 @@
+name: render-create-room-default
+description: >
+  Render comparison: create a 4-wall room and compare visual output.
+  Tests default material colors, lighting, and geometry rendering.
+target:
+  os: [linux]
+  mode: [tauri]
+setup:
+  - new_home:
+steps:
+  - select_tool: {tool: wall}
+  - click: {x: 0, y: 0}
+  - click: {x: 400, y: 0}
+  - click: {x: 400, y: 300}
+  - click: {x: 0, y: 300}
+  - click: {x: 0, y: 0}
+  - click: {x: 0, y: 0, dbl: true}
+  - select_tool: {tool: selection}
+checkpoints:
+  - afterStep: 8
+    capture: [state, 3d]
+assertions:
+  - at: 8
+    artifact: state
+    kind: count
+    path: walls
+    value: 4

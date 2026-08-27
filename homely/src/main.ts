@@ -10,7 +10,7 @@ import { CatalogPanel } from './ui/catalog-panel'
 import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 
-import { View3D } from './view3d'
+import { View3D, type CameraPresetName } from './view3d'
 import { PropertiesPanel } from './ui/properties-panel'
 
 // ── DOM shell ───────────────────────────────────────────────────────────────
@@ -60,6 +60,18 @@ const engine = new PlanEngine(model)
 // Catalog panel — declared here (used by canvas/key closures) and
 // instantiated in boot once the DOM host exists.
 let catalogPanel: CatalogPanel | null = null
+
+// User-imported models resolve through blob URLs; bundled models through
+// `assets/<path>`. Declared before View3D (used in its options).
+const userModelUrls = new Map<string, string>()
+const modelUrlResolver = (modelPath: string): string => {
+  const blobUrl = userModelUrls.get(modelPath)
+  return blobUrl ?? `assets/${modelPath}`
+}
+
+// 3D view — assigned in boot (after the DOM shell exists). Declared up here so
+// toolbar/refresh closures can reference it before assignment without a TDZ error.
+let view3d: View3D | null = null
 
 let automationText = 'idle'
 let currentView: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 }
@@ -205,6 +217,10 @@ function buildToolbar(): void {
       <button class="tool-btn" data-preset="plan" title="Plan only">Plan</button>
       <button class="tool-btn" data-preset="3d" title="3D only">3D</button>
     </div>
+    <div class="camera-toggle" id="camera3d-toggle" title="3D camera angle">
+      <button class="tool-btn active" data-camera3d="observer" title="Perspective 3D view">Persp</button>
+      <button class="tool-btn" data-camera3d="top" title="Top-down 3D view">Top</button>
+    </div>
     <button class="tool-btn" id="dark-toggle" title="Toggle dark mode">◐</button>
   `
 
@@ -233,6 +249,13 @@ function buildToolbar(): void {
     btn.addEventListener('click', () => setCameraPreset(btn.dataset.preset as string))
   }
 
+  for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-camera3d]')) {
+    btn.addEventListener('click', () => {
+      view3d?.setActivePreset(btn.dataset.camera3d as CameraPresetName)
+      refreshCamera3DButtons()
+    })
+  }
+
   toolbar.querySelector('#dark-toggle')!.addEventListener('click', toggleDarkMode)
 
   toolbar.querySelector('#btn-catalog')!.addEventListener('click', () => {
@@ -254,6 +277,17 @@ function refreshToolbar(): void {
   const redoBtn = toolbar.querySelector<HTMLButtonElement>('#btn-redo')!
   undoBtn.disabled = !hasUndo()
   redoBtn.disabled = !hasRedo()
+  refreshCamera3DButtons()
+}
+
+function refreshCamera3DButtons(): void {
+  // At boot the 3D view isn't constructed yet; the HTML default (observer
+  // marked active) already matches the initial preset, so leave it alone.
+  if (!view3d) return
+  const active = view3d.director.getActivePreset()
+  for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-camera3d]')) {
+    btn.classList.toggle('active', btn.dataset.camera3d === active)
+  }
 }
 
 // ── Status bar ──────────────────────────────────────────────────────────────
@@ -636,7 +670,13 @@ window.addEventListener('resize', resizeCanvas)
 requestAnimationFrame(frame)
 
 // 3D view — creates its own renderer inside #view3d
-new View3D(store, { container: root.querySelector<HTMLDivElement>('#view3d')! })
+view3d = new View3D(store, {
+  container: root.querySelector<HTMLDivElement>('#view3d')!,
+  modelUrlResolver,
+})
+// Expose for E2E testing
+;(window as unknown as { __view3d: View3D }).__view3d = view3d
+;(window as unknown as { __model: HomeModel }).__model = model
 
 // Properties panel — right sidebar
 const mainArea = root.querySelector<HTMLDivElement>('#main-area')!
@@ -646,10 +686,19 @@ const propsPanel = new PropertiesPanel(store, mainArea)
 // bundled manifest; until it resolves, place mode is unavailable. connectAutomation
 // awaits this so the shared catalog reaches the automation handler too.
 let sharedCatalog: FurnitureCatalog | null = null
-const catalogReady = loadDefaultCatalog().then(({ catalog }) => {
+let userCatalog: import('./core/user-catalog').UserCatalog | null = null
+
+const catalogReady = loadDefaultCatalog().then(async ({ catalog }) => {
+  const { UserCatalog, InMemoryModelStore } = await import('./core/user-catalog')
   sharedCatalog = catalog
+  // Merge user-imported items on top of the bundled defaults. The store is
+  // in-memory for now; swap in IndexedDB/Tauri-fs in the persistence ticket.
+  userCatalog = new UserCatalog(catalog, new InMemoryModelStore())
+  await userCatalog.refresh()
+  sharedCatalog = userCatalog.merged
+
   catalogPanel = new CatalogPanel({
-    catalog,
+    catalog: sharedCatalog,
     onPlace: (item, x, y, angleDeg) => {
       const placed = model.addFurniture({
         name: item.name,
@@ -672,12 +721,61 @@ const catalogReady = loadDefaultCatalog().then(({ catalog }) => {
     onPlaceModeChange: (active) => {
       canvas.style.cursor = active ? 'crosshair' : ''
     },
+    onImportModel: () => {
+      importModelFile()
+    },
   })
   catalogHost.appendChild(catalogPanel.element)
 }).catch((err) => {
   console.error('[catalog] failed to load catalog:', err)
   statusAutomation.textContent = 'automation: catalog unavailable'
 })
+
+// ── User model import (runtime) ─────────────────────────────────────────────
+
+let fileInput: HTMLInputElement | null = null
+
+/**
+ * Open a .glb file picker and import the model into the user catalog. The
+ * model joins the merged catalog immediately; its blob URL feeds View3D.
+ */
+function importModelFile(): void {
+  if (!fileInput) {
+    fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.glb,model/gltf-binary,model/gltf+json'
+    fileInput.addEventListener('change', () => {
+      const file = fileInput?.files?.[0]
+      if (!file) return
+      void (async () => {
+        try {
+          const data = await file.arrayBuffer()
+          if (!userCatalog) throw new Error('catalog not ready')
+          const record = await userCatalog.import({
+            fileName: file.name,
+            data,
+          })
+          // Keep a blob URL so View3D can load the model bytes.
+          const blob = new Blob([data], { type: 'model/gltf-binary' })
+          const url = URL.createObjectURL(blob)
+          userModelUrls.set(record.blobKey, url)
+          // Refresh the merged catalog + panel + automation surface.
+          sharedCatalog = userCatalog.merged
+          catalogPanel?.setCatalog(sharedCatalog)
+          catalogPanel?.disarm()
+          refreshToolbar()
+          refreshStatus()
+          statusAutomation.textContent = `imported ${record.name}`
+        } catch (err) {
+          console.error('[catalog] import failed:', err)
+          statusAutomation.textContent = 'import failed'
+        }
+      })()
+    })
+  }
+  fileInput.value = ''
+  fileInput.click()
+}
 
 // ── Automation ──────────────────────────────────────────────────────────────
 

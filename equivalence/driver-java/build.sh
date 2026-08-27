@@ -25,4 +25,14 @@ mkdir -p classes
   -d classes \
   $(find src -name '*.java')
 
+# Bundle SH3D's furniture catalog data (GPL, part of the SH3D-derived driver)
+# so the live catalog is non-empty. build/SweetHome3D.jar ships without these
+# resources; they live under SH3D_ROOT/src/..../io/ and load off the classpath
+# via ResourceBundle.getBundle("com.eteks.sweethome3d.io.DefaultFurnitureCatalog").
+mkdir -p classes/com/eteks/sweethome3d/io
+cp "$SH3D_ROOT/src/com/eteks/sweethome3d/io/DefaultFurnitureCatalog"*.properties \
+   classes/com/eteks/sweethome3d/io/
+cp -r "$SH3D_ROOT/src/com/eteks/sweethome3d/io/resources" \
+   classes/com/eteks/sweethome3d/io/
+
 echo "built $(find classes -name '*.class' | wc -l) classes"

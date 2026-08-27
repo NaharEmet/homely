@@ -48,7 +48,7 @@ function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THR
     elevation + height / 2,
     (wall.yStart + wall.yEnd) / 2,
   )
-  mesh.rotation.y = Math.atan2(dy, dx)
+  mesh.rotation.y = -Math.atan2(dy, dx)
   mesh.castShadow = true
   mesh.receiveShadow = true
   return mesh
@@ -70,7 +70,7 @@ function wallEdges(wall: Wall, elevation: number): THREE.LineSegments {
     elevation + height / 2,
     (wall.yStart + wall.yEnd) / 2,
   )
-  line.rotation.y = Math.atan2(dy, dx)
+  line.rotation.y = -Math.atan2(dy, dx)
   return line
 }
 
@@ -104,6 +104,18 @@ function modelLoader(): GLTFLoader {
 }
 
 /**
+ * Resolve a furniture's modelPath to a fetchable URL. Bundled models live at
+ * `assets/<modelPath>`; user-imported models may live under a different scheme
+ * (blob:, custom protocol). Override via View3DOptions.modelUrlResolver.
+ */
+export type ModelUrlResolver = (modelPath: string) => string
+
+export const defaultModelUrlResolver: ModelUrlResolver = (modelPath) => `assets/${modelPath}`
+
+/** Scene-level resolver; set once per buildScene call via the options. */
+let activeModelUrlResolver: ModelUrlResolver = defaultModelUrlResolver
+
+/**
  * Scale + center a loaded model to fit the furniture's width/height/depth,
  * leaving its origin at the box center (which the parent mesh already places).
  */
@@ -128,14 +140,17 @@ function fitModelToBox(model: THREE.Object3D, item: Furniture): THREE.Object3D {
  * model is fetched from the local bundle (`assets/<modelPath>`) — never the
  * network — so there is no runtime dependency on an external host.
  */
-function swapInModel(mesh: THREE.Mesh, item: Furniture, fallback: THREE.BufferGeometry): void {
+function swapInModel(mesh: THREE.Mesh, item: Furniture): void {
+  if (!item.modelPath) return
   const loader = modelLoader()
-  const url = `assets/${item.modelPath}`
+  const url = activeModelUrlResolver(item.modelPath)
   try {
     loader.load(
       url,
       (gltf) => {
         const model = fitModelToBox(gltf.scene, item)
+        // Keep the box as a visible fallback until the model parses, then swap
+        // its geometry out (dispose the placeholder) and add the model on top.
         mesh.geometry.dispose()
         mesh.geometry = new THREE.BoxGeometry(0, 0, 0)
         mesh.add(model)
@@ -143,11 +158,11 @@ function swapInModel(mesh: THREE.Mesh, item: Furniture, fallback: THREE.BufferGe
       undefined,
       () => {
         // Load failed: keep the colored box (fallback geometry untouched).
-        void fallback
       },
     )
   } catch {
-    // Unsupported environment or synchronous failure: keep the box.
+    // Unsupported environment (e.g. Node without a DOM FileLoader) or a
+    // synchronous URL error: keep the colored box.
   }
 }
 
@@ -161,10 +176,10 @@ function furnitureMesh(item: Furniture, elevation: number): THREE.Mesh {
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = `furniture:${item.id}`
   mesh.position.set(item.x, elevation + item.elevation + item.height / 2, item.y)
-  mesh.rotation.y = THREE.MathUtils.degToRad(item.angleDeg)
+  mesh.rotation.y = -THREE.MathUtils.degToRad(item.angleDeg)
   mesh.castShadow = true
   mesh.receiveShadow = true
-  if (item.modelPath) swapInModel(mesh, item, geometry)
+  swapInModel(mesh, item)
   return mesh
 }
 
@@ -186,7 +201,17 @@ function applySelectionHighlight(scene: THREE.Scene, selectionSet: Set<string>):
 }
 
 /** Full scene rebuild from a normalized home snapshot. Deterministic. */
-export function buildScene(home: NormalizedHomeState): THREE.Scene {
+export function buildScene(home: NormalizedHomeState, options?: { modelUrlResolver?: ModelUrlResolver }): THREE.Scene {
+  const previousResolver = activeModelUrlResolver
+  if (options?.modelUrlResolver) activeModelUrlResolver = options.modelUrlResolver
+  try {
+    return buildSceneInner(home)
+  } finally {
+    activeModelUrlResolver = previousResolver
+  }
+}
+
+function buildSceneInner(home: NormalizedHomeState): THREE.Scene {
   const scene = new THREE.Scene()
   if (home.environment.skyColor !== null) {
     scene.background = new THREE.Color(home.environment.skyColor)

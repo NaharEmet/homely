@@ -12,6 +12,7 @@
 
 import type { CatalogItem } from '../core/catalog'
 import type { FurnitureCatalog } from '../core/catalog'
+import { renderModelThumbnail } from './model-thumbnail'
 
 export interface CatalogPlacement {
   catalogId: string
@@ -28,6 +29,9 @@ export interface CatalogPanelOptions {
   onPlace: (item: CatalogItem, x: number, y: number, angleDeg: number) => string
   /** Called when the user exits place mode (Escape / toggle). */
   onPlaceModeChange?: (active: boolean) => void
+  /** Called when the user clicks "Import model…". Implementations open a
+   *  file dialog, read a .glb, and refresh the catalog. */
+  onImportModel?: () => void
 }
 
 const CATEGORY_ORDER = [
@@ -44,9 +48,10 @@ const CATEGORY_ORDER = [
 ]
 
 export class CatalogPanel {
-  private readonly catalog: FurnitureCatalog
+  private catalog: FurnitureCatalog
   private readonly onPlace: (item: CatalogItem, x: number, y: number, angleDeg: number) => string
   private readonly onPlaceModeChange?: (active: boolean) => void
+  private readonly onImportModel?: () => void
 
   private root: HTMLDivElement
   private searchInput: HTMLInputElement
@@ -62,11 +67,15 @@ export class CatalogPanel {
     this.catalog = options.catalog
     this.onPlace = options.onPlace
     this.onPlaceModeChange = options.onPlaceModeChange
+    this.onImportModel = options.onImportModel
 
     this.root = document.createElement('div')
     this.root.className = 'catalog-panel'
     this.root.innerHTML = `
-      <div class="catalog-header">Furniture</div>
+      <div class="catalog-header">
+        <span>Furniture</span>
+        <button class="catalog-import" title="Import a GLB model">+ Import</button>
+      </div>
       <div class="catalog-search-wrap">
         <input class="catalog-search" type="search" placeholder="Search furniture…" />
       </div>
@@ -79,6 +88,14 @@ export class CatalogPanel {
     this.grid = this.root.querySelector<HTMLDivElement>('.catalog-grid')!
     this.statusLine = this.root.querySelector<HTMLDivElement>('.catalog-status')!
 
+    const importBtn = this.root.querySelector<HTMLButtonElement>('.catalog-import')!
+    importBtn.addEventListener('click', () => {
+      if (!this.onImportModel) {
+        this.renderStatusMessage('Import not available')
+        return
+      }
+      this.onImportModel()
+    })
     this.searchInput.addEventListener('input', () => {
       this.query = this.searchInput.value
       this.renderGrid()
@@ -196,9 +213,21 @@ export class CatalogPanel {
       card.dataset.catalogId = item.catalogId
       card.classList.toggle('armed', this.armed?.catalogId === item.catalogId)
 
-      const swatch = document.createElement('div')
+      const swatch = document.createElement('canvas')
       swatch.className = 'catalog-swatch'
-      swatch.style.background = colorCss(item.color)
+      swatch.width = 96
+      swatch.height = 72
+      swatch.dataset.modelUrl = item.modelPath ? `assets/${item.modelPath}` : ''
+      // Kick off the thumbnail render; falls back to a color swatch.
+      if (item.modelPath) {
+        renderModelThumbnail(swatch, `assets/${item.modelPath}`, item.color)
+      } else {
+        const ctx2d = swatch.getContext('2d')
+        if (ctx2d) {
+          ctx2d.fillStyle = colorCss(item.color)
+          ctx2d.fillRect(0, 0, swatch.width, swatch.height)
+        }
+      }
 
       const name = document.createElement('div')
       name.className = 'catalog-name'
@@ -227,6 +256,18 @@ export class CatalogPanel {
       this.statusLine.textContent = 'Click a piece to place it'
       this.statusLine.classList.remove('armed')
     }
+  }
+
+  private renderStatusMessage(message: string): void {
+    this.statusLine.textContent = message
+    this.statusLine.classList.remove('armed')
+  }
+
+  /** Replace the backing catalog (e.g. after a user import) and re-render. */
+  setCatalog(catalog: FurnitureCatalog): void {
+    this.catalog = catalog
+    this.buildCategories()
+    this.renderGrid()
   }
 }
 

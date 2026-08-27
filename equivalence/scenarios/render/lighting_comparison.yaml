@@ -1,0 +1,26 @@
+name: render-lighting-comparison
+description: >
+  Render comparison: verify lighting consistency between renderers.
+  Tests directional light, ambient, and hemisphere light.
+target:
+  os: [linux]
+  mode: [tauri]
+setup:
+  - new_home:
+steps:
+  - select_tool: {tool: wall}
+  - click: {x: -200, y: -200}
+  - click: {x: 200, y: -200}
+  - click: {x: 200, y: 200}
+  - click: {x: -200, y: 200}
+  - click: {x: -200, y: -200}
+  - click: {x: -200, y: -200, dbl: true}
+checkpoints:
+  - afterStep: 7
+    capture: [state, 3d]
+assertions:
+  - at: 7
+    artifact: state
+    kind: count
+    path: walls
+    value: 4

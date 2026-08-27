@@ -42,3 +42,43 @@ Java app against the clone.
   uses cm + degrees.
 - Camera defaults: FOV 63deg, top camera z=1010 pitch 45deg, observer eye 170cm
   yaw 315deg pitch 11.25deg. Default wall height 250cm.
+
+## E2E tests (Playwright) — MANDATORY for UI work
+
+All agents working on `homely/` UI or 3D viewport MUST run E2E tests before
+committing. Unit tests (`vitest run`) are NOT sufficient for UI changes.
+
+### Required verification
+
+| Change area | Run |
+|---|---|
+| `src/main.ts`, `src/ui/`, `src/style.css` | `npm run e2e` |
+| `src/view3d/`, `src/render/` | `npm run e2e` |
+| `src/plan/` | `npm run e2e` |
+| `src/core/` (model changes affecting UI) | `npm run e2e` |
+
+### Quick reference
+
+```bash
+cd homely
+npm run e2e                    # headless, full suite
+npm run e2e:open               # headed browser, interactive
+npx playwright test --ui       # Playwright test runner UI
+npx playwright show-trace ...  # replay failed trace
+```
+
+### Adding new E2E tests
+
+1. Create `e2e/<name>.spec.ts`
+2. `beforeEach`: `page.goto('/')` + `page.waitForSelector('#view3d canvas')`
+3. Plan interactions: `page.mouse.click()` on `#plan-canvas` coordinates
+4. Tool/camera: `page.locator('button[data-tool="wall"]').click()`
+5. WebGL checks: `page.evaluate()` to read canvas pixels
+6. Visual regression: `await expect(locator).toHaveScreenshot('name.png')`
+
+### Steward notes
+
+- E2E tests auto-start the Vite dev server (port 1420) via `webServer` config
+- Screenshots fail on first run (no baseline); use `--update-snapshots` to set
+- Chromium only (WebGL required; no Firefox/Safari)
+- Trace files saved on failure for debugging

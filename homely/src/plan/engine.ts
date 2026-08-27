@@ -72,6 +72,8 @@ export class PlanEngine {
   private readonly model: HomeModel
   private tool: PlanTool = 'selection'
   private magnetismEnabled = true
+  /** Last position reported by move_mouse (SH3D parity: cursor pre-position). */
+  private lastMove: Point | null = null
   private phase: 'idle' | 'drawing' = 'idle'
   private chainStart: Point | null = null
   /** Walls already committed to the home during the open drawing session. */
@@ -108,6 +110,19 @@ export class PlanEngine {
 
   isMagnetismEnabled(): boolean {
     return this.magnetismEnabled
+  }
+
+  /** Records the cursor position (SH3D moveMouse). Clicks carry explicit
+   * coordinates in this clone, so move_mouse is advisory/preview only. */
+  moveMouse(x: number, y: number): void {
+    if (typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y)) {
+      throw new ModelError('move_mouse params x,y must be finite numbers')
+    }
+    this.lastMove = { x, y }
+  }
+
+  getLastMove(): Point | null {
+    return this.lastMove
   }
 
   getPreview(): PlanPreview {
@@ -260,6 +275,21 @@ export class PlanEngine {
         this.model.setSelection([...selection])
       }
       return
+    }
+    // Frozen protocol creates rooms/dimension-lines/labels via dedicated
+    // automation commands (add_room/add_dimension_line/add_label), not via
+    // plan clicks. Fail loudly instead of silently producing nothing.
+    if (this.tool === 'room') {
+      throw new ModelError('room tool is not supported via clicks; use the add_room command')
+    }
+    if (this.tool === 'dimensionLine') {
+      throw new ModelError('dimensionLine tool is not supported via clicks; use the add_dimension_line command')
+    }
+    if (this.tool === 'label') {
+      throw new ModelError('label tool is not supported via clicks; use the add_label command')
+    }
+    if (this.tool === 'polyline') {
+      throw new ModelError('polyline tool is not supported')
     }
     if (this.tool !== 'wall') return
 

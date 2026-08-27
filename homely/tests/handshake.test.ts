@@ -159,7 +159,7 @@ describe('ws protocol v1 handshake', () => {
 
   it('rejects unknown commands with a code', async () => {
     await awaitHello()
-    const res = await orch.sendRequest('zoom', { factor: 2 })
+    const res = await orch.sendRequest('no_such_command', { factor: 2 })
     expect(res.ok).toBe(false)
     expect(res.code).toBe('UNKNOWN_COMMAND')
     expect(typeof res.error).toBe('string')

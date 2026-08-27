@@ -142,7 +142,7 @@ export function buildRenderableScene(
       type: 'box',
       position: [(wall.xStart + wall.xEnd) / 2, elevation + height / 2, (wall.yStart + wall.yEnd) / 2],
       size: [length, height, wall.thickness],
-      rotation: [0, angle, 0],
+      rotation: [0, -angle, 0],
       materialId: rightMat.id,
     }
 
@@ -151,7 +151,7 @@ export function buildRenderableScene(
       type: 'box',
       position: [(wall.xStart + wall.xEnd) / 2, elevation + height / 2, (wall.yStart + wall.yEnd) / 2],
       size: [length, height, wall.thickness],
-      rotation: [0, angle, 0],
+      rotation: [0, -angle, 0],
       materialId: leftMat.id,
     }
 
@@ -234,7 +234,7 @@ export function buildRenderableScene(
       type: 'box',
       position: [item.x, elevation + item.elevation + item.height / 2, item.y],
       size: [item.width, item.height, item.depth],
-      rotation: [0, degToRad(item.angleDeg), 0],
+      rotation: [0, -degToRad(item.angleDeg), 0],
       materialId: mat.id,
     }
 

@@ -1,0 +1,26 @@
+name: render-texture-mapping
+description: >
+  Render comparison: verify textures are correctly mapped to surfaces.
+  Uses the LuxCore sidecar for high-quality reference renders.
+target:
+  os: [linux]
+  mode: [tauri]
+setup:
+  - new_home:
+steps:
+  - select_tool: {tool: wall}
+  - click: {x: 0, y: 0}
+  - click: {x: 300, y: 0}
+  - click: {x: 300, y: 200}
+  - click: {x: 0, y: 200}
+  - click: {x: 0, y: 0}
+  - click: {x: 0, y: 0, dbl: true}
+checkpoints:
+  - afterStep: 7
+    capture: [state, 3d]
+assertions:
+  - at: 7
+    artifact: state
+    kind: count
+    path: walls
+    value: 4
