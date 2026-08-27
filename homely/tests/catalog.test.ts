@@ -159,8 +159,18 @@ describe('bundled catalog manifest', () => {
     expect(() => validateManifest(catalogJson)).not.toThrow()
     const catalog = new FurnitureCatalog(catalogJson.items)
     expect(catalog.size).toBeGreaterThanOrEqual(20)
-    for (const category of ['Living', 'Bedroom', 'Kitchen', 'Bathroom', 'Dining', 'Office', 'Doors', 'Windows', 'Outdoor']) {
+    // Ported from SH3D's default catalog — these are the categories it defines.
+    for (const category of ['Living', 'Bedroom', 'Kitchen', 'Bathroom', 'Doors', 'Other']) {
       expect(catalog.itemsIn(category).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('modelPath is optional (items without a model render as boxes)', () => {
+    const catalog = new FurnitureCatalog(catalogJson.items)
+    for (const item of catalog.list()) {
+      if (item.modelPath !== undefined) {
+        expect(item.modelPath, `item ${item.catalogId} modelPath`).toMatch(/^models\/.+\.glb$/)
+      }
     }
   })
 })
