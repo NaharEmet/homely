@@ -347,4 +347,28 @@ export function drawPlan(
     }
     ctx.setLineDash([])
   }
+
+  // Room-tool preview: in-progress polygon outline + vertex dots.
+  if (preview && preview.tool === 'room' && preview.phase === 'drawing' && preview.roomPoints.length > 0) {
+    ctx.setLineDash([6, 4])
+    ctx.strokeStyle = PREVIEW_COLOR
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    preview.roomPoints.forEach(([x, y], index) => {
+      if (index === 0) ctx.moveTo(mapper.sx(x), mapper.sy(y))
+      else ctx.lineTo(mapper.sx(x), mapper.sy(y))
+    })
+    if (preview.roomPoints.length >= 3) {
+      const [x0, y0] = preview.roomPoints[0]!
+      ctx.lineTo(mapper.sx(x0), mapper.sy(y0))
+    }
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.fillStyle = PREVIEW_COLOR
+    for (const [x, y] of preview.roomPoints) {
+      ctx.beginPath()
+      ctx.arc(mapper.sx(x), mapper.sy(y), 3, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
 }

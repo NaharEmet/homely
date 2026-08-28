@@ -366,3 +366,122 @@ describe('wall vertex interaction', () => {
     expect(after1.yStart).toBe(0)
   })
 })
+
+describe('room tool state machine', () => {
+  it('clicks a 4-vertex polygon and double-click closes it into a Room', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    engine.setMagnetism(false)
+    click(0, 0)
+    expect(engine.getPreview().phase).toBe('drawing')
+    click(200, 0)
+    click(200, 150)
+    click(0, 150)
+    click(50, 75, { dbl: true })
+
+    const home = store.getHome()
+    expect(home.rooms).toHaveLength(1)
+    const room = home.rooms[0]!
+    expect(room.points).toEqual([
+      [0, 0],
+      [200, 0],
+      [200, 150],
+      [0, 150],
+    ])
+    expect(engine.getPreview().phase).toBe('idle')
+    expect(home.selection).toEqual([room.id])
+  })
+
+  it('click-near-start closes the polygon without adding a closing vertex', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    engine.setMagnetism(false)
+    click(0, 0)
+    click(100, 0)
+    click(100, 80)
+    click(0, 80)
+    click(1, 1) // within ENDPOINT_HIT_RADIUS (10) of the start (0,0)
+
+    const home = store.getHome()
+    expect(home.rooms).toHaveLength(1)
+    expect(home.rooms[0]!.points).toEqual([
+      [0, 0],
+      [100, 0],
+      [100, 80],
+      [0, 80],
+    ])
+    expect(engine.getPreview().phase).toBe('idle')
+  })
+
+  it('escape cancels the in-progress polygon and creates no room', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    click(0, 0)
+    click(100, 0)
+    click(100, 80)
+    expect(engine.getPreview().phase).toBe('drawing')
+    expect(engine.getPreview().roomPoints).toHaveLength(3)
+
+    engine.key('escape')
+    expect(engine.getPreview().phase).toBe('idle')
+    expect(engine.getPreview().roomPoints).toHaveLength(0)
+    expect(store.getHome().rooms).toHaveLength(0)
+  })
+
+  it('undo removes the created room in one step', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    engine.setMagnetism(false)
+    click(0, 0)
+    click(100, 0)
+    click(100, 80)
+    click(0, 80)
+    click(1, 1) // close near start
+
+    expect(store.getHome().rooms).toHaveLength(1)
+    expect(store.canUndo()).toBe(true)
+    store.undo()
+    expect(store.getHome().rooms).toHaveLength(0)
+    expect(store.canUndo()).toBe(false)
+  })
+
+  it('double-click immediately after starting (1 vertex) creates no room', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    click(0, 0)
+    click(50, 50, { dbl: true })
+
+    expect(store.getHome().rooms).toHaveLength(0)
+    expect(engine.getPreview().phase).toBe('idle')
+  })
+
+  it('switching tools mid-drawing cancels the in-progress polygon', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    click(0, 0)
+    click(100, 0)
+    click(100, 80)
+    expect(engine.getPreview().phase).toBe('drawing')
+    engine.setTool('selection')
+    expect(engine.getPreview().phase).toBe('idle')
+    expect(store.getHome().rooms).toHaveLength(0)
+  })
+
+  it('a 3-vertex triangle closes correctly via double-click', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('room')
+    engine.setMagnetism(false)
+    click(0, 0)
+    click(100, 0)
+    click(50, 80)
+    click(50, 40, { dbl: true })
+
+    const home = store.getHome()
+    expect(home.rooms).toHaveLength(1)
+    expect(home.rooms[0]!.points).toEqual([
+      [0, 0],
+      [100, 0],
+      [50, 80],
+    ])
+  })
+})

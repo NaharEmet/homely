@@ -199,7 +199,7 @@ function buildToolbar(): void {
     <div class="tool-group">
       <button class="tool-btn" data-tool="selection" title="Selection (V)">Select</button>
       <button class="tool-btn" data-tool="wall" title="Wall tool (W)">Wall</button>
-      <button class="tool-btn" data-tool="room" title="Room — coming soon" disabled>Room</button>
+      <button class="tool-btn" data-tool="room" title="Room tool">Room</button>
       <button class="tool-btn" data-tool="dimensionLine" title="Dimension — coming soon" disabled>Dim</button>
       <button class="tool-btn" data-tool="label" title="Text — coming soon" disabled>Text</button>
       <button class="tool-btn" id="btn-catalog" title="Furniture catalog (F)">Furniture</button>

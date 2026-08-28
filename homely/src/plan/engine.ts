@@ -62,6 +62,7 @@ export interface PlanPreview {
   phase: 'idle' | 'drawing'
   chainStart: Point | null
   pendingWalls: Array<Segment>
+  roomPoints: Array<[number, number]>
 }
 
 function samePoint(a: Point, b: Point): boolean {
@@ -79,6 +80,8 @@ export class PlanEngine {
   /** Walls already committed to the home during the open drawing session. */
   private chainIds: Array<string> = []
   private sessionOpen = false
+  /** Polygon vertices collected during a room-tool drawing session. */
+  private roomPoints: Array<[number, number]> = []
   private vertexDrag: { wallId: string; endpoint: 'start' | 'end'; startX: number; startY: number; connectedWalls: Array<{ wallId: string; endpoint: 'start' | 'end' }> } | null = null
 
   constructor(model: HomeModel) {
@@ -95,9 +98,12 @@ export class PlanEngine {
 
   setTool(tool: PlanTool): void {
     this.validateTool(tool)
-    if (this.phase === 'drawing') this.validateDrawnWalls()
+    if (this.phase === 'drawing') {
+      if (this.tool === 'room') this.cancelRoomDrawing()
+      else this.validateDrawnWalls()
+    }
     this.tool = tool
-    if (tool !== 'wall') this.phase = 'idle'
+    if (tool !== 'wall' && tool !== 'room') this.phase = 'idle'
     // Mirror the tool into home state without polluting undo history.
     this.model.getStore().patchNonUndoable((h) => {
       h.activeTool = tool === 'panning' ? 'panning' : (tool as never)
@@ -133,6 +139,7 @@ export class PlanEngine {
       // Walls enter the home at each click (SH3D WallDrawingState), so the
       // renderer draws them from the store snapshot; nothing stays pending.
       pendingWalls: [],
+      roomPoints: this.roomPoints.map(([x, y]) => [x, y] as [number, number]),
     }
   }
 
@@ -250,6 +257,10 @@ export class PlanEngine {
       this.validateDrawnWalls()
       return
     }
+    if (this.tool === 'room' && this.phase === 'drawing') {
+      this.cancelRoomDrawing()
+      return
+    }
     this.setTool('selection')
   }
 
@@ -280,7 +291,8 @@ export class PlanEngine {
     // automation commands (add_room/add_dimension_line/add_label), not via
     // plan clicks. Fail loudly instead of silently producing nothing.
     if (this.tool === 'room') {
-      throw new ModelError('room tool is not supported via clicks; use the add_room command')
+      this.roomClick(point)
+      return
     }
     if (this.tool === 'dimensionLine') {
       throw new ModelError('dimensionLine tool is not supported via clicks; use the add_dimension_line command')
@@ -315,6 +327,10 @@ export class PlanEngine {
   }
 
   private doubleClick(point: Point): void {
+    if (this.tool === 'room' && this.phase === 'drawing') {
+      this.closeRoom()
+      return
+    }
     if (this.tool !== 'wall' || this.phase !== 'drawing') return
     const start = this.chainStart!
     const end = this.resolveSegmentEnd(start, point)
@@ -352,6 +368,44 @@ export class PlanEngine {
       this.model.getStore().endCompoundEdit()
       this.sessionOpen = false
     }
+  }
+
+  // ── Room tool ─────────────────────────────────────────────────────────────
+
+  private roomClick(point: Point): void {
+    if (this.phase === 'idle') {
+      this.roomPoints = [[point.x, point.y]]
+      this.phase = 'drawing'
+      this.chainStart = point
+      return
+    }
+    if (this.roomPoints.length >= 3) {
+      const first = this.roomPoints[0]!
+      if (distance(point, { x: first[0], y: first[1] }) <= ENDPOINT_HIT_RADIUS) {
+        this.closeRoom()
+        return
+      }
+    }
+    this.roomPoints.push([point.x, point.y])
+    this.chainStart = point
+  }
+
+  private closeRoom(): void {
+    const points = this.roomPoints
+    this.roomPoints = []
+    this.phase = 'idle'
+    this.chainStart = null
+    if (points.length < 3) return
+    this.model.getStore().beginCompoundEdit()
+    const room = this.model.addRoom(points)
+    this.model.setSelection([room.id])
+    this.model.getStore().endCompoundEdit()
+  }
+
+  private cancelRoomDrawing(): void {
+    this.roomPoints = []
+    this.phase = 'idle'
+    this.chainStart = null
   }
 
   /**
