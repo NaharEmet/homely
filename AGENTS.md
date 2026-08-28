@@ -53,3 +53,24 @@ npx playwright test --ui # interactive test runner
 - `npx playwright show-trace results/.../trace.zip` to replay a failed run.
 - Screenshots saved to `test-results/` on failure.
 - HTML report at `playwright-report/` after any run.
+
+## CI
+
+Automated verification runs on every push/PR via `.github/workflows/ci.yml`
+(two jobs: `homely` = lint + tsc + vitest + Playwright e2e; `equivalence` =
+pytest). The workflow uses whatever lint/test config exists at merge time —
+it does not own the config itself.
+
+**No GitHub remote is configured yet**, so Actions cannot run in this
+environment. The **authoritative** verification gate is the local script:
+
+```bash
+./scripts/verify-all.sh             # all checks (lint+tsc+vitest+e2e+pytest)
+./scripts/verify-all.sh --skip-e2e  # fast path, skips slow Playwright suite
+```
+
+The script runs every check CI would run, prints a PASS/FAIL summary per
+step, and exits non-zero if any step fails. Run it before committing — it is
+the automated check that prevents a "done" ticket from shipping with broken
+stubs (the U3 regression that motivated this CI). Once a GitHub remote is
+added, `ci.yml` runs the identical checks automatically on push/PR.
