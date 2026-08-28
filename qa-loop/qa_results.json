@@ -1,19 +1,19 @@
 {
-  "generated": "2026-08-27T13:58:45Z",
-  "wsPort": 41711,
+  "generated": "2026-08-28T13:37:00Z",
+  "wsPort": 46085,
   "scenarios": [
     {
       "scenario": "basic_room.yaml",
-      "runId": "20260827-135837-basic-rectangular-room",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260827-135837-basic-rectangular-room",
+      "runId": "20260828-133653-basic-rectangular-room",
+      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133653-basic-rectangular-room",
       "ok": true,
       "errorCount": 0,
       "errors": []
     },
     {
       "scenario": "doors_windows.yaml",
-      "runId": "20260827-135844-doors-windows-cutouts",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260827-135844-doors-windows-cutouts",
+      "runId": "20260828-133659-doors-windows-cutouts",
+      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133659-doors-windows-cutouts",
       "ok": false,
       "errorCount": 2,
       "errors": [
@@ -36,9 +36,17 @@
       ]
     },
     {
+      "scenario": "furniture_place.yaml",
+      "runId": "20260828-133659-furniture-placement-and-3d-render",
+      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133659-furniture-placement-and-3d-render",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
+    },
+    {
       "scenario": "levels_and_annotations.yaml",
-      "runId": "20260827-135844-levels-dimensions-labels",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260827-135844-levels-dimensions-labels",
+      "runId": "20260828-133700-levels-dimensions-labels",
+      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133700-levels-dimensions-labels",
       "ok": true,
       "errorCount": 0,
       "errors": []

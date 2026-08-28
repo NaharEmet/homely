@@ -48,7 +48,7 @@ function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THR
     elevation + height / 2,
     (wall.yStart + wall.yEnd) / 2,
   )
-  mesh.rotation.y = -Math.atan2(dy, dx)
+  mesh.rotation.y = Math.atan2(dy, dx)
   mesh.castShadow = true
   mesh.receiveShadow = true
   return mesh
@@ -70,7 +70,7 @@ function wallEdges(wall: Wall, elevation: number): THREE.LineSegments {
     elevation + height / 2,
     (wall.yStart + wall.yEnd) / 2,
   )
-  line.rotation.y = -Math.atan2(dy, dx)
+  line.rotation.y = Math.atan2(dy, dx)
   return line
 }
 
@@ -214,7 +214,7 @@ function furnitureMesh(item: Furniture, elevation: number, onReady?: () => void)
   const mesh = new THREE.Mesh(geometry, material)
   mesh.name = `furniture:${item.id}`
   mesh.position.set(item.x, elevation + item.elevation + item.height / 2, item.y)
-  mesh.rotation.y = -THREE.MathUtils.degToRad(item.angleDeg)
+  mesh.rotation.y = THREE.MathUtils.degToRad(item.angleDeg)
   mesh.castShadow = true
   mesh.receiveShadow = true
   swapInModel(mesh, item, onReady)
