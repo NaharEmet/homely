@@ -511,13 +511,18 @@ body {
 /* ── Furniture catalog panel (U7) ─────────────────────────────────────────── */
 
 #catalog-host {
-  width: 240px;
+  --catalog-min-width: 260px;
+  --catalog-default-width: 280px;
+
+  width: var(--catalog-default-width);
+  min-width: var(--catalog-min-width);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--panel-bg);
   border-right: 1px solid var(--border);
   overflow: hidden;
+  position: relative;
 }
 
 #catalog-host.collapsed {
@@ -529,6 +534,41 @@ body {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  position: relative;
+}
+
+.catalog-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+}
+
+.catalog-resize-handle:hover,
+.catalog-resize-handle.dragging {
+  background: var(--divider-hover);
+}
+
+.catalog-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 24px;
+  background: var(--text-secondary);
+  border-radius: 1px;
+  opacity: 0.5;
+}
+
+.catalog-resize-handle:hover::after,
+.catalog-resize-handle.dragging::after {
+  opacity: 1;
 }
 
 .catalog-header {
@@ -621,8 +661,8 @@ body {
   flex: 1;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  grid-template-columns: 1fr;
+  gap: 8px;
   padding: 8px;
   align-content: start;
 }
@@ -662,14 +702,16 @@ body {
 
 .catalog-name {
   font-size: 11.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .catalog-dims {
   font-size: 10.5px;
   color: var(--text-secondary);
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .catalog-empty {

@@ -72,6 +72,7 @@ export class CatalogPanel {
     this.root = document.createElement('div')
     this.root.className = 'catalog-panel'
     this.root.innerHTML = `
+      <div class="catalog-resize-handle" title="Drag to resize catalog panel"></div>
       <div class="catalog-header">
         <span>Furniture</span>
         <button class="catalog-import" title="Import a GLB model">+ Import</button>
@@ -87,6 +88,8 @@ export class CatalogPanel {
     this.categoryList = this.root.querySelector<HTMLDivElement>('.catalog-categories')!
     this.grid = this.root.querySelector<HTMLDivElement>('.catalog-grid')!
     this.statusLine = this.root.querySelector<HTMLDivElement>('.catalog-status')!
+
+    this.attachResizeHandle()
 
     const importBtn = this.root.querySelector<HTMLButtonElement>('.catalog-import')!
     importBtn.addEventListener('click', () => {
@@ -146,6 +149,38 @@ export class CatalogPanel {
     const item = this.armed
     if (!item) return null
     return this.onPlace(item, x, y, angleDeg)
+  }
+
+  private attachResizeHandle(): void {
+    const handle = this.root.querySelector<HTMLDivElement>('.catalog-resize-handle')!
+    const host = this.root.parentElement as HTMLElement | null
+    if (!host) return
+
+    const MIN_WIDTH = 260
+    const MAX_WIDTH = 480
+
+    let startX = 0
+    let startWidth = 0
+
+    const onMove = (e: MouseEvent): void => {
+      const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidth + (e.clientX - startX)))
+      host.style.width = `${newWidth}px`
+    }
+
+    const onUp = (): void => {
+      handle.classList.remove('dragging')
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+
+    handle.addEventListener('mousedown', (e: MouseEvent) => {
+      e.preventDefault()
+      startX = e.clientX
+      startWidth = host.getBoundingClientRect().width
+      handle.classList.add('dragging')
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
+    })
   }
 
   private buildCategories(): void {
