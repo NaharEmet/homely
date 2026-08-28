@@ -3,7 +3,9 @@ description: Draw a closed 4-wall room with a floor via the wall tool + add_room
 target:
   os: [linux]
   mode: [web]
-setup: []
+setup:
+  - command: new_home
+    params: {}
 steps:
   - command: set_view
     params: {view: plan}

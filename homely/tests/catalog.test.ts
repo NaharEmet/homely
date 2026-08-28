@@ -3,6 +3,7 @@ import { FurnitureCatalog } from '../src/core/catalog'
 import type { CatalogItem, CatalogManifest } from '../src/core/catalog'
 import { resolvePlacement, toWireItem, validateManifest } from '../src/core/catalog-service'
 import { HomeStore } from '../src/core/store'
+import { HomeModel } from '../src/core/model'
 import { HomelyCommandHandler } from '../src/automation/homely-handler'
 import catalogJsonRaw from '../assets/catalog/catalog.json'
 const catalogJson = catalogJsonRaw as unknown as CatalogManifest
@@ -262,6 +263,73 @@ describe('automation catalog commands', () => {
     if (!result.ok) return
     const placed = store.getHome().furniture.at(-1)
     expect(placed).toMatchObject({ name: 'custom', catalogId: null, width: 10, depth: 20, height: 30 })
+  })
+
+  it('add_door attaches a door to the given wall (M5)', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const handler = new HomelyCommandHandler(store, { catalog: new FurnitureCatalog(fixture) })
+    const wall = model.addWall({
+      xStart: 0,
+      yStart: 0,
+      xEnd: 400,
+      yEnd: 0,
+      thickness: 10,
+      height: 250,
+      patternId: 'solid',
+    })
+
+    const result = handler.execute('add_door', { wallId: wall.id, x: 100, width: 90 })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const id = (result.data as { id: string }).id
+    const placed = store.getHome().furniture.find((f) => f.id === id)
+    expect(placed).toMatchObject({
+      catalogId: 'front-door',
+      name: 'Front Door',
+      doorOrWindow: true,
+      wallRef: wall.id,
+      wallOffset: 100,
+    })
+    // Placed along the wall at the given offset, offset half the wall's
+    // thickness to one side (on the wall face, not its centerline).
+    expect(placed!.x).toBeCloseTo(100)
+    expect(placed!.y).toBeCloseTo(5)
+  })
+
+  it('add_window attaches a window to the given wall (M5)', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const handler = new HomelyCommandHandler(store, { catalog: new FurnitureCatalog(fixture) })
+    const wall = model.addWall({
+      xStart: 0,
+      yStart: 0,
+      xEnd: 400,
+      yEnd: 0,
+      thickness: 10,
+      height: 250,
+      patternId: 'solid',
+    })
+
+    const result = handler.execute('add_window', { wallId: wall.id, x: 200, width: 120 })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const id = (result.data as { id: string }).id
+    const placed = store.getHome().furniture.find((f) => f.id === id)
+    expect(placed).toMatchObject({
+      catalogId: 'window-120',
+      name: 'Window 120cm',
+      doorOrWindow: true,
+      wallRef: wall.id,
+      wallOffset: 200,
+    })
+  })
+
+  it('add_door rejects an unknown wall id with INVALID_PARAMS', () => {
+    const handler = handlerWithCatalog()
+    const result = handler.execute('add_door', { wallId: 'nope', x: 0 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.code).toBe('INVALID_PARAMS')
   })
 
   it('list_catalog / catalog_add_furniture require a loaded catalog', () => {

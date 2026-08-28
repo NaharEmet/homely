@@ -62,6 +62,8 @@ const COMMANDS = [
   'zoom',
   'set_view',
   'screenshot',
+  'add_door',
+  'add_window',
 ] as const
 
 const CAMERA_FIELDS = ['x', 'y', 'z', 'yawDeg', 'pitchDeg', 'fovDeg'] as const
@@ -462,6 +464,90 @@ export class HomelyCommandHandler implements CommandHandler {
           ok: true,
           data: this.capture.screenshot({ view, width, height }),
         }
+      }
+      case 'add_door':
+      case 'add_window': {
+        const wallId = params.wallId
+        assert(typeof wallId === 'string' && wallId.length > 0, 'param wallId must be a non-empty string')
+        const home = this.store.getHome()
+        const wall = home.walls.find((w) => w.id === wallId)
+        if (!wall) throw new ModelError(`unknown wall id: ${wallId}`)
+
+        const xAlongWall = params.x === undefined
+          ? Math.hypot(wall.xEnd - wall.xStart, wall.yEnd - wall.yStart) / 2
+          : requireNumber(params, 'x')
+
+        let catalogId: string | null = null
+        if (this.catalog) {
+          const desiredWidth = params.width === undefined ? undefined : requireNumber(params, 'width')
+          const doorItems = this.catalog
+            .list()
+            .filter((i) => i.doorOrWindow === true && (type === 'add_door' ? /door/i.test(i.name) : /window/i.test(i.name)))
+          if (desiredWidth !== undefined && doorItems.length > 0) {
+            const exact = doorItems.find((i) => Math.abs(i.width - desiredWidth) < 1)
+            const near = doorItems.reduce((best, i) =>
+              Math.abs(i.width - desiredWidth) < Math.abs(best.width - desiredWidth) ? i : best,
+            )
+            catalogId = exact?.catalogId ?? near.catalogId
+          } else if (doorItems.length > 0) {
+            catalogId = doorItems[0]!.catalogId
+          }
+        }
+
+        let name: string
+        let width: number
+        let depth: number
+        let height: number
+        let elevation = 0
+        let color: number | null = null
+        let modelPath: string | null = null
+
+        if (catalogId && this.catalog) {
+          const resolved = resolvePlacement(this.catalog, catalogId)
+          name = resolved.name
+          width = resolved.width
+          depth = resolved.depth
+          height = resolved.height
+          elevation = resolved.elevation ?? 0
+          color = resolved.color ?? null
+          modelPath = resolved.modelPath ?? null
+        } else {
+          name = type === 'add_door' ? 'Door' : 'Window'
+          width = params.width === undefined ? 90 : requireNumber(params, 'width')
+          depth = 10
+          height = type === 'add_door' ? 210 : 120
+        }
+
+        const dx = wall.xEnd - wall.xStart
+        const dy = wall.yEnd - wall.yStart
+        const wallLen = Math.hypot(dx, dy) || 1
+        const nx = dx / wallLen
+        const ny = dy / wallLen
+        const wx = -ny
+        const wy = nx
+
+        const t = Math.max(0, Math.min(wallLen, xAlongWall))
+        const px = wall.xStart + nx * t + wx * (wall.thickness / 2)
+        const py = wall.yStart + ny * t + wy * (wall.thickness / 2)
+        const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
+
+        const furniture = this.model.addFurniture({
+          name,
+          catalogId,
+          x: px,
+          y: py,
+          angleDeg,
+          width,
+          depth,
+          height,
+          elevation,
+          color,
+          doorOrWindow: true,
+          modelPath,
+          wallRef: wallId,
+          wallOffset: t,
+        })
+        return { ok: true, data: { id: furniture.id } }
       }
       default:
         return { ok: false, error: `unknown command: ${type}`, code: 'UNKNOWN_COMMAND' }

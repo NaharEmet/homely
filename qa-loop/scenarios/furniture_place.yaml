@@ -3,7 +3,9 @@ description: Place two catalog furniture items (GLB models) via add_furniture wi
 target:
   os: [linux]
   mode: [web]
-setup: []
+setup:
+  - command: new_home
+    params: {}
 steps:
   - command: add_room
     params: {points: [[0, 0], [600, 0], [600, 400], [0, 400]]}

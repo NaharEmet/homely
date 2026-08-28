@@ -1,13 +1,39 @@
 name: Doors windows cutouts
-description: Attempt to add a door/window cutout. These commands are not implemented; expect UNKNOWN_COMMAND -> missing feature ledger entry.
+description: Draw a wall, then attach a door and a window to it via add_door/add_window; assert both create wall-attached furniture (M5).
 target:
   os: [linux]
   mode: [web]
-setup: []
+setup:
+  - command: new_home
+    params: {}
 steps:
+  - command: set_view
+    params: {view: plan}
+  - command: select_tool
+    params: {tool: wall}
+  - command: set_magnetism
+    params: {enabled: false}
+  - command: click
+    params: {x: 0, y: 0}
+  - command: click
+    params: {x: 400, y: 0}
+  - command: key
+    params: {key: escape}
   - command: add_door
-    params: {wallId: "w1", x: 100, width: 90}
+    params: {wallId: "wall-1", x: 100, width: 90}
   - command: add_window
-    params: {wallId: "w1", x: 200, width: 120}
-checkpoints: []
-assertions: []
+    params: {wallId: "wall-1", x: 300, width: 120}
+checkpoints:
+  - afterStep: 8
+    capture: [state, plan, 3d]
+assertions:
+  - at: 8
+    artifact: state
+    kind: count
+    path: walls
+    value: 1
+  - at: 8
+    artifact: state
+    kind: count
+    path: furniture
+    value: 2

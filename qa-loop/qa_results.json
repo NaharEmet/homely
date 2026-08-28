@@ -1,52 +1,35 @@
 {
-  "generated": "2026-08-28T13:37:00Z",
-  "wsPort": 46085,
+  "generated": "2026-08-28T17:04:20Z",
+  "wsPort": 43745,
   "scenarios": [
     {
       "scenario": "basic_room.yaml",
-      "runId": "20260828-133653-basic-rectangular-room",
-      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133653-basic-rectangular-room",
+      "runId": "20260828-170412-basic-rectangular-room",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170412-basic-rectangular-room",
       "ok": true,
       "errorCount": 0,
       "errors": []
     },
     {
       "scenario": "doors_windows.yaml",
-      "runId": "20260828-133659-doors-windows-cutouts",
-      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133659-doors-windows-cutouts",
-      "ok": false,
-      "errorCount": 2,
-      "errors": [
-        {
-          "phase": "steps",
-          "step": 1,
-          "adapter": "homely",
-          "command": "add_door",
-          "error": "unknown command: add_door",
-          "code": "UNKNOWN_COMMAND"
-        },
-        {
-          "phase": "steps",
-          "step": 2,
-          "adapter": "homely",
-          "command": "add_window",
-          "error": "unknown command: add_window",
-          "code": "UNKNOWN_COMMAND"
-        }
-      ]
+      "runId": "20260828-170419-doors-windows-cutouts",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170419-doors-windows-cutouts",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
     },
     {
       "scenario": "furniture_place.yaml",
-      "runId": "20260828-133659-furniture-placement-and-3d-render",
-      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133659-furniture-placement-and-3d-render",
+      "runId": "20260828-170420-furniture-placement-and-3d-render",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170420-furniture-placement-and-3d-render",
       "ok": true,
       "errorCount": 0,
       "errors": []
     },
     {
       "scenario": "levels_and_annotations.yaml",
-      "runId": "20260828-133700-levels-dimensions-labels",
-      "artifactsDir": "/home/nahar/Documents/code/wt-furniture/qa-loop/results/20260828-133700-levels-dimensions-labels",
+      "runId": "20260828-170420-levels-dimensions-labels",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170420-levels-dimensions-labels",
       "ok": true,
       "errorCount": 0,
       "errors": []

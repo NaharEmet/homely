@@ -3,7 +3,9 @@ description: Exercise levels, dimension lines and labels; assert they land in ho
 target:
   os: [linux]
   mode: [web]
-setup: []
+setup:
+  - command: new_home
+    params: {}
 steps:
   - command: add_level
     params: {name: "Upper", elevation: 300, floorThickness: 30}

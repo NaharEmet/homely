@@ -82,6 +82,8 @@ export interface Furniture {
   visible?: boolean
   movable?: boolean
   doorOrWindow?: boolean
+  wallRef?: string | null
+  wallOffset?: number | null
   /** Up to three [xDeg, yDeg, zDeg] rotation triples (schema modelRotationDeg). */
   modelRotationDeg?: Array<[number, number, number]>
   /**
