@@ -56,6 +56,60 @@ re-explore the SH3D source before reading it.
 | U7 | furniture-catalog-ui | U3,U2 | homely/src/ui + homely/src/core + homely/index.html | clone-dev | clone-dev | done | Catalog panel (left sidebar): category list, search, click-to-place, place mode, undo/redo on placed pieces. Wired into main.ts. |
 | U8 | furniture-assets-pipeline | U7 | homely/assets + homely/scripts + homely/src-tauri | clone-dev | clone-dev | done | asset pipeline + GLTF load w/ box fallback; vitest 146 green, tsc/eslint(build)/vite clean; eslint has 4 pre-existing errors in e2e/viewport3d.spec.ts (unrelated WIP) Asset pipeline + bundling: commit generated textures (already in homely/assets/textures/ via generate.py), a build/dev script that regenerates/validates textures, furniture 3D model assets (OBJ/GLB) + catalog manifest, Vite copies `assets/` to dist, Tauri bundles it, renderer loads real models instead of BoxGeometry. DoD: `npm run assets` regenerates textures; `npm run tauri build` bundles assets; 3D view renders furniture models, plan view renders catalog thumbnails; no network fetch at runtime. |
 
+## Track M — Modernization audit (2026-08-28, manager-driven, opencode-delegated)
+
+Live user-perspective audit of `npm run dev` (Playwright-driven, screenshots in
+`qa-loop/results/` + ad-hoc captures) found that several U-track tickets above
+were marked `done` without their DoD actually holding end-to-end. This track
+fixes what a real user hits first, then closes remaining SH3D feature gaps,
+then hardens agent-maintainability. Manager (Claude, this session) dispatches
+each ticket to an opencode worker, then independently re-verifies before
+`done` — same gatekeeper discipline as `engineering-manager.md`.
+
+**Audit findings (evidence for tickets below):**
+1. Plan view auto-refits (`fitToBounds`) on *every* render frame until the
+   user manually zooms once (`main.ts:646 if (!userHasZoomed)`) — drawing a
+   multi-click wall chain visibly warps mid-draw because scale/pan shift
+   after each click. Reproduced twice with fresh bounding-box reads per
+   click (not a test artifact).
+2. `File > Save` and `File > Open` are `alert('...not implemented yet')`
+   stubs (`main.ts:163-164`); `Edit > Select All` is also a stub
+   (`main.ts:174`) and Ctrl+A falls through to native browser text-select
+   instead. A design app that cannot save/load a project is not usable.
+3. The 3D viewport renders a blank uniform-gray frame on a brand-new empty
+   home (no ground plane, horizon, or grid), and renders drawn walls as
+   flat unlit color shards with no recognizable geometry from the default
+   camera. Confirmed with 0 console errors, so it's a scene/camera/lighting
+   logic bug, not a crash.
+4. Room, Dimension, and Text tools are `disabled` in the DOM with
+   `title="... — coming soon"` (`main.ts:201-203`) despite U3's DoD
+   ("all tools selectable") being marked `done`.
+5. `qa-loop/MISSING_FEATURES.md` + `qa_results.json` (2026-08-27 run):
+   `add_door`/`add_window` are `UNKNOWN_COMMAND` — doors/windows exist as
+   catalog items (21 "Doors" category pieces incl. windows) but placing one
+   does not cut a wall opening.
+6. No level/floor management UI exists, though the wall properties panel
+   already has a `Level: (none)` field, implying the model supports it.
+7. Furniture catalog sidebar is a fixed ~240px column; item names/dims
+   truncate (e.g. "Chest", "Round table", "Washbasin" all clipped).
+8. No CI — verification is manual/self-reported per ticket, which is how
+   finding 4 shipped as `done`. For a "fully agent-maintainable" app, every
+   push should get an automatic lint/typecheck/test/e2e signal.
+
+| Ticket | Title | Deps | Owner dir | Track | Claimed-by | Status | Notes |
+|--------|-------|------|-----------|-------|------------|--------|-------|
+| M1 | core-interactions-fix | U6 | homely/src/main.ts + homely/src/plan/renderer.ts + homely/src/services/adapters | opencode:glm-5.2 | | todo | P0. (a) Stop `fitToBounds` from re-running every render frame — only fit on initial load / explicit "Fit" click / window resize, never mid-draw. (b) Wire File>Save + File>Open to real persistence: complete `services/adapters/tauri-fs.ts`, use Tauri's fs plugin under `tauri dev`/build and a browser download/`<input type=file>` fallback under plain `vite dev`, serializing via the existing NormalizedHomeState schema. (c) Wire Edit>Select All (menu + Ctrl+A) to select every item in the current level via the store, not a browser default. DoD: e2e test draws a 4-wall rectangle via 4 raw clicks with no explicit zoom action and asserts the resulting wall graph is a rectangle (right angles, expected lengths); e2e/unit round-trips Save→Open and the model matches; Select All selects N objects and properties panel reflects it. `npm run e2e` + `npm test` green. |
+| M2 | 3d-viewport-rendering | U4 | homely/src/view3d | opencode:glm-5.2 | | todo | P0. Fix the 3D viewport so it's never a blank/uniform frame: add a visible ground plane + horizon/sky (or gradient background) for an empty home, verify ambient+directional lighting actually differentiates wall/floor faces (check light intensities, material response, camera near/far vs scene scale — likely a units/scale or camera-inside-geometry bug given current output is a giant flat gray triangle filling the frame). DoD: new Playwright screenshot assertion — empty-home 3D screenshot has >1 distinct color region (not solid); a 4-wall-room 3D screenshot from the `3d`/`Persp` preset shows ≥2 visibly shaded wall faces at different brightness. Update `e2e/viewport3d.spec.ts` baselines. `npm run e2e` green. |
+| M3 | room-tool | M1 | homely/src/plan + homely/src/core | opencode:glm-5.2 | | todo | P1. Implement the Room tool per `IMPROVEMENT_PLAN.md` §1 (or a simpler click-polygon variant if auto-loop-detection is too large for one ticket — auto-detect is a stretch goal, not required for DoD): user can create a room/floor polygon, it renders with floor fill + centered m² area label in plan and floor+ceiling in 3D, undoable. Remove `disabled` + `data-tool="room"` stub. DoD: e2e draws 4 walls + creates a room from that loop, asserts area label present and 3D shows a floor plane; undo removes it. |
+| M4 | dimension-and-label-tools | M1 | homely/src/plan + homely/src/core | opencode:kimi-k2.7-code | | todo | P1. Implement Dimension-line tool (click two points, shows length, editable) and Text/label tool (click to place editable text) — basic SH3D parity, not full feature set. Remove their `disabled` stubs. DoD: e2e places one dimension line and one label; both persist through undo/redo and through M1's save/open round-trip. |
+| M5 | doors-and-windows | M1,M3 | homely/src/plan + homely/src/core + homely/src/view3d | opencode:grok-4.6 | | todo | P1, hardest ticket — frontier model. Dropping a door/window catalog piece (`eTeks#door`, `eTeks#window85x123`, etc., already in `catalog.json`) onto a wall must cut/reserve an opening in that wall (SH3D "piece on wall" semantics) in both plan and 3D, and the piece must move/resize with the wall. Add automation commands so `qa-loop/scenarios/doors_windows.yaml` passes (currently `UNKNOWN_COMMAND` for `add_door`/`add_window` per `qa-loop/MISSING_FEATURES.md`). DoD: `cd qa-loop && python3 run.py doors_windows` (or equivalent) reports 0 errors; e2e places a door on a wall and the wall visibly shows a gap under it. |
+| M6 | levels-ui | M1 | homely/src/main.ts + homely/src/core | opencode:glm-5.2 | | todo | P1. Add UI (menu or panel) to add/rename/switch/delete levels — the model already carries a per-wall `Level` field (seen as `(none)` in the properties panel) so this is UI + store wiring, not new model design. DoD: e2e adds a second level, switches to it, draws a wall, switches back to level 1, and asserts the level-1 wall count is unchanged (objects are level-scoped). |
+| M7 | catalog-panel-polish | U7 | homely/src/ui/catalog-panel.ts + homely/src/style.css | opencode:kimi-k2.7-code | | todo | P2, independent — can run any time, no shared files with M1-M6. Fix the furniture sidebar so item names/dimensions never clip at ≥1280px window width (currently a fixed ~240px column truncates "Chest", "Round table", "Washbasin", etc.) — widen cards, wrap text, or make the panel resizable. DoD: Playwright screenshot of the catalog panel at 1280/1600/1920px widths shows no clipped label text (visual check + a DOM assertion that `scrollWidth <= clientWidth` on catalog item labels). |
+| M8 | preferences-dialog | M1 | homely/src (new: ui/preferences) | opencode:glm-5.2 | | todo | P2. Add a Preferences dialog (unit cm/inch, default new-wall height/thickness, language stub, ground color) reachable from a menu, persisted (localStorage is fine), and new walls/rooms honor the changed defaults. DoD: change default wall height in prefs, draw a new wall, assert it uses the new height; reload the page and assert the pref persisted. |
+| M9 | export-and-format-docs | M1 | homely/src/services/adapters + docs/ | opencode:glm-5.2 | | todo | P2. Document (in `docs/`) that Homely's save format is its own NormalizedHomeState JSON, not SH3D's `.sh3d` binary format (GPL — never port SH3D's file-format code). Add a plan-view PNG export (File>Export or toolbar button) since SH3D's print/export is a headline feature and Homely currently has none. DoD: doc committed; export produces a valid, non-trivial PNG of the current plan. |
+| M10 | ci-pipeline | — | .github/workflows + repo root | opencode:glm-5.2 | | todo | P3, agent-maintainability, no file overlap with anything else — run any time. Add CI (GitHub Actions, or if no remote CI is available in this environment, a documented `./scripts/verify-all.sh` wired into a pre-push hook) running `homely`: lint + tsc + vitest + playwright e2e, and `equivalence`: pytest, on every push. This is the actual fix for how U3's "done" shipped with disabled tool stubs — automatic verification instead of self-reported ticket rows. DoD: workflow/script committed; a deliberately-broken change (e.g. reintroduce a `disabled` stub) is shown to fail it; documented in `AGENTS.md`. |
+| M11 | qa-loop-coverage-expansion | M3,M4,M5,M6 | qa-loop/ | opencode:kimi-k2.7-code | | todo | P3. Extend `qa-loop/scenarios/` to cover room/dimension/label/doors/levels once M3-M6 land, replacing today's 3-scenario/1-failing coverage; wire `qa-loop` into M10's CI. DoD: `qa-loop/run.py` covers all Track M features with 0 errors; runs in CI. |
+
 ## Sequencing waves
 
 ```
@@ -66,6 +120,9 @@ S1  DONE: A4+B5 landed → C5 unblocked
 W3  DONE: E2E integration + B6-B9, C7-C9, D2-D3
 W4  UI phase 1 parallel: clone-dev: U1 (layout shell) → then U2‖U3 (plan enhance + toolbar) → then U4‖U5 (3d polish + properties)
 W5  Furniture: driver-dev: A5 (catalog over wire) → clone-dev: U7 (catalog UI, needs U3/U2) → U8 (asset pipeline + bundling, needs U7)
+W6  Modernization (opencode-delegated, manager-verified): M1‖M2 (disjoint dirs)
+    → M3‖M4‖M6 (all depend on M1, disjoint dirs from each other) ‖ M7‖M10 (fully independent, run anytime)
+    → M5 (needs M1+M3, hardest — frontier model) → M8‖M9 → M11
 ```
 
 ## Board rules
