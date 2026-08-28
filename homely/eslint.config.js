@@ -25,4 +25,12 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
+  {
+    // Standalone .mjs utility scripts (e.g. shot.mjs) use Playwright's
+    // page.evaluate which references browser globals, plus Node's console.
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
 )
