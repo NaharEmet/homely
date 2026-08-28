@@ -10,6 +10,7 @@ import { CatalogPanel } from './ui/catalog-panel'
 import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { snapFurniturePlacement } from './plan/furniture-snap'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
+import { saveHomeFile, loadHomeFile } from './services/adapters/home-persistence'
 
 import { View3D, type CameraPresetName } from './view3d'
 import { PropertiesPanel } from './ui/properties-panel'
@@ -160,8 +161,8 @@ function refreshMenus(): void {
       items: [
         { label: 'New', action: () => { store.resetToEmpty(); refreshAll() } },
         { label: '---' },
-        { label: 'Save', action: () => alert('Save: not implemented yet') },
-        { label: 'Open', action: () => alert('Open: not implemented yet') },
+        { label: 'Save', action: async () => { await saveHomeFile(store.getHome()) } },
+        { label: 'Open', action: async () => { const home = await loadHomeFile(); if (home) { store.loadHome(home); doFit(); refreshAll() } } },
       ],
     },
     {
@@ -171,7 +172,7 @@ function refreshMenus(): void {
         { label: 'Redo', shortcut: 'Ctrl+Y', action: () => { store.redo(); refreshAll() }, disabled: !hasRedo() },
         { label: '---' },
         { label: 'Delete', action: () => { engine.key('delete'); refreshAll() } },
-        { label: 'Select All', action: () => alert('Select All: not implemented yet') },
+        { label: 'Select All', action: () => selectAll() },
       ],
     },
     {
@@ -241,9 +242,7 @@ function buildToolbar(): void {
   })
 
   toolbar.querySelector('#btn-fit')!.addEventListener('click', () => {
-    userHasZoomed = false
-    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
-    refreshStatus()
+    doFit()
   })
 
   for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-preset]')) {
@@ -551,9 +550,7 @@ canvas.addEventListener('pointerup', (event) => {
 
 canvas.addEventListener('dblclick', (event) => {
   if (event.button === 1) {
-    userHasZoomed = false
-    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
-    refreshStatus()
+    doFit()
     return
   }
   const point = eventModelPoint(event)
@@ -591,6 +588,12 @@ window.addEventListener('keydown', (event) => {
     event.preventDefault()
     store.redo()
     refreshAll()
+    return
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key === 'a') {
+    event.preventDefault()
+    selectAll()
     return
   }
 
@@ -643,9 +646,6 @@ function render(): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   const home = store.getHome()
   const preview: PlanPreview | null = engine.getPreview()
-  if (!userHasZoomed) {
-    currentView = fitToBounds(home, canvas.width, canvas.height)
-  }
   const rc = ctx as unknown as PlanRenderingContext
   drawPlan(home, preview, rc, currentView, canvas.width, canvas.height)
 }
@@ -657,11 +657,34 @@ function frame(): void {
   requestAnimationFrame(frame)
 }
 
+function doFit(): void {
+  userHasZoomed = false
+  currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+  refreshStatus()
+}
+
+function selectAll(): void {
+  const home = store.getHome()
+  const ids = [
+    ...home.levels,
+    ...home.walls,
+    ...home.rooms,
+    ...home.furniture,
+    ...home.dimensionLines,
+    ...home.labels,
+  ].map((i) => i.id)
+  model.setSelection(ids)
+  refreshAll()
+}
+
 function resizeCanvas(): void {
   const w = planPanel.clientWidth
   const h = planPanel.clientHeight
   canvas.width = Math.max(320, Math.floor(w))
   canvas.height = Math.max(200, Math.floor(h))
+  if (!userHasZoomed) {
+    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+  }
 }
 
 function refreshAll(): void {
