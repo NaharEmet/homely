@@ -28,3 +28,10 @@ Thumbs.db
 
 # Reference source tree (upstream GPL checkout, read-only)
 sweethome3d-7.5-wayland-patch/
+
+# Generated knowledge graph + test artifacts
+graphify-out/
+playwright-report/
+test-results/
+ruff_cache/
+.commandcode/
