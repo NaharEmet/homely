@@ -63,6 +63,7 @@ export interface PlanPreview {
   chainStart: Point | null
   pendingWalls: Array<Segment>
   roomPoints: Array<[number, number]>
+  dimensionLine: { start: Point; end: Point; length: number } | null
 }
 
 function samePoint(a: Point, b: Point): boolean {
@@ -82,6 +83,8 @@ export class PlanEngine {
   private sessionOpen = false
   /** Polygon vertices collected during a room-tool drawing session. */
   private roomPoints: Array<[number, number]> = []
+  /** Start point of a dimension-line-tool drawing session. */
+  private dimensionStart: Point | null = null
   private vertexDrag: { wallId: string; endpoint: 'start' | 'end'; startX: number; startY: number; connectedWalls: Array<{ wallId: string; endpoint: 'start' | 'end' }> } | null = null
 
   constructor(model: HomeModel) {
@@ -100,10 +103,11 @@ export class PlanEngine {
     this.validateTool(tool)
     if (this.phase === 'drawing') {
       if (this.tool === 'room') this.cancelRoomDrawing()
+      else if (this.tool === 'dimensionLine') this.cancelDimensionLine()
       else this.validateDrawnWalls()
     }
     this.tool = tool
-    if (tool !== 'wall' && tool !== 'room') this.phase = 'idle'
+    if (tool !== 'wall' && tool !== 'room' && tool !== 'dimensionLine' && tool !== 'label') this.phase = 'idle'
     // Mirror the tool into home state without polluting undo history.
     this.model.getStore().patchNonUndoable((h) => {
       h.activeTool = tool === 'panning' ? 'panning' : (tool as never)
@@ -132,6 +136,14 @@ export class PlanEngine {
   }
 
   getPreview(): PlanPreview {
+    const dim =
+      this.tool === 'dimensionLine' && this.phase === 'drawing' && this.dimensionStart && this.lastMove
+        ? {
+            start: this.dimensionStart,
+            end: this.lastMove,
+            length: distance(this.dimensionStart, this.lastMove),
+          }
+        : null
     return {
       tool: this.tool,
       phase: this.phase,
@@ -140,6 +152,7 @@ export class PlanEngine {
       // renderer draws them from the store snapshot; nothing stays pending.
       pendingWalls: [],
       roomPoints: this.roomPoints.map(([x, y]) => [x, y] as [number, number]),
+      dimensionLine: dim,
     }
   }
 
@@ -261,6 +274,10 @@ export class PlanEngine {
       this.cancelRoomDrawing()
       return
     }
+    if (this.tool === 'dimensionLine' && this.phase === 'drawing') {
+      this.cancelDimensionLine()
+      return
+    }
     this.setTool('selection')
   }
 
@@ -295,10 +312,12 @@ export class PlanEngine {
       return
     }
     if (this.tool === 'dimensionLine') {
-      throw new ModelError('dimensionLine tool is not supported via clicks; use the add_dimension_line command')
+      this.dimensionLineClick(point)
+      return
     }
     if (this.tool === 'label') {
-      throw new ModelError('label tool is not supported via clicks; use the add_label command')
+      this.labelClick(point)
+      return
     }
     if (this.tool === 'polyline') {
       throw new ModelError('polyline tool is not supported')
@@ -406,6 +425,47 @@ export class PlanEngine {
     this.roomPoints = []
     this.phase = 'idle'
     this.chainStart = null
+  }
+
+  // ── Dimension-line tool ───────────────────────────────────────────────────
+
+  private dimensionLineClick(point: Point): void {
+    if (this.phase === 'idle') {
+      this.dimensionStart = point
+      this.chainStart = point
+      this.phase = 'drawing'
+      return
+    }
+    const start = this.dimensionStart!
+    this.dimensionStart = null
+    this.chainStart = null
+    this.phase = 'idle'
+    if (distance(start, point) <= 0) return
+    this.model.getStore().beginCompoundEdit()
+    const dim = this.model.addDimensionLine({
+      xStart: start.x,
+      yStart: start.y,
+      xEnd: point.x,
+      yEnd: point.y,
+      offset: 0,
+    })
+    this.model.setSelection([dim.id])
+    this.model.getStore().endCompoundEdit()
+  }
+
+  private cancelDimensionLine(): void {
+    this.dimensionStart = null
+    this.chainStart = null
+    this.phase = 'idle'
+  }
+
+  // ── Label tool ────────────────────────────────────────────────────────────
+
+  private labelClick(point: Point): void {
+    this.model.getStore().beginCompoundEdit()
+    const label = this.model.addLabel({ text: 'Text', x: point.x, y: point.y })
+    this.model.setSelection([label.id])
+    this.model.getStore().endCompoundEdit()
   }
 
   /**

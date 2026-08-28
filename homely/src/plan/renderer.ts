@@ -46,6 +46,11 @@ function cssColor(color: number | null | undefined, fallback: string): string {
   return `#${(color >>> 0).toString(16).padStart(6, '0')}`
 }
 
+/** Formats a length in cm as meters with two decimals. */
+function formatLength(cm: number): string {
+  return `${(cm / 100).toFixed(2)} m`
+}
+
 /** Shoelace formula — returns area in cm². */
 function shoelaceArea(points: Array<[number, number]>): number {
   let area = 0
@@ -316,6 +321,17 @@ export function drawPlan(
     ctx.lineWidth = 1
     ctx.strokeStyle = selected.has(dim.id) ? SELECTION_COLOR : DIMENSION_COLOR
     ctx.stroke()
+
+    const midX = (dim.xStart + dim.xEnd) / 2
+    const midY = (dim.yStart + dim.yEnd) / 2
+    const length = Math.hypot(dim.xEnd - dim.xStart, dim.yEnd - dim.yStart)
+    ctx.fillStyle = selected.has(dim.id) ? SELECTION_COLOR : DIMENSION_COLOR
+    ctx.font = '11px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(formatLength(length), mapper.sx(midX), mapper.sy(midY))
+    ctx.textAlign = 'start'
+    ctx.textBaseline = 'alphabetic'
   }
 
   // Labels.
@@ -370,5 +386,28 @@ export function drawPlan(
       ctx.arc(mapper.sx(x), mapper.sy(y), 3, 0, Math.PI * 2)
       ctx.fill()
     }
+  }
+
+  // Dimension-line preview: in-progress segment + length readout.
+  if (preview && preview.tool === 'dimensionLine' && preview.dimensionLine) {
+    const { start, end, length } = preview.dimensionLine
+    ctx.beginPath()
+    ctx.moveTo(mapper.sx(start.x), mapper.sy(start.y))
+    ctx.lineTo(mapper.sx(end.x), mapper.sy(end.y))
+    ctx.lineWidth = 1
+    ctx.strokeStyle = PREVIEW_COLOR
+    ctx.setLineDash([6, 4])
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    const midX = (start.x + end.x) / 2
+    const midY = (start.y + end.y) / 2
+    ctx.fillStyle = PREVIEW_COLOR
+    ctx.font = '11px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(formatLength(length), mapper.sx(midX), mapper.sy(midY))
+    ctx.textAlign = 'start'
+    ctx.textBaseline = 'alphabetic'
   }
 }

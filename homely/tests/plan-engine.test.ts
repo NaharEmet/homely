@@ -485,3 +485,104 @@ describe('room tool state machine', () => {
     ])
   })
 })
+
+describe('dimension-line tool state machine', () => {
+  it('two clicks place a dimension line with the correct endpoints and length', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('dimensionLine')
+    engine.setMagnetism(false)
+    click(0, 0)
+    expect(engine.getPreview().phase).toBe('drawing')
+    click(300, 0)
+
+    const home = store.getHome()
+    expect(home.dimensionLines).toHaveLength(1)
+    const dim = home.dimensionLines[0]!
+    expect([dim.xStart, dim.yStart, dim.xEnd, dim.yEnd]).toEqual([0, 0, 300, 0])
+    expect(engine.getPreview().phase).toBe('idle')
+    expect(home.selection).toEqual([dim.id])
+  })
+
+  it('escape cancels an in-progress dimension line and creates none', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('dimensionLine')
+    click(0, 0)
+    expect(engine.getPreview().phase).toBe('drawing')
+
+    engine.key('escape')
+    expect(engine.getPreview().phase).toBe('idle')
+    expect(store.getHome().dimensionLines).toHaveLength(0)
+  })
+
+  it('undo removes the created dimension line in one step (create+select compounded)', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('dimensionLine')
+    engine.setMagnetism(false)
+    click(0, 0)
+    click(150, 0)
+
+    expect(store.getHome().dimensionLines).toHaveLength(1)
+    expect(store.canUndo()).toBe(true)
+    store.undo()
+    expect(store.getHome().dimensionLines).toHaveLength(0)
+    expect(store.canUndo()).toBe(false)
+  })
+
+  it('clicking the same point twice creates no zero-length dimension line', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('dimensionLine')
+    click(10, 10)
+    click(10, 10)
+    expect(store.getHome().dimensionLines).toHaveLength(0)
+    expect(engine.getPreview().phase).toBe('idle')
+  })
+
+  it('re-arms after placing one, ready to draw another', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('dimensionLine')
+    engine.setMagnetism(false)
+    click(0, 0)
+    click(100, 0)
+    click(0, 50)
+    click(0, 200)
+
+    expect(store.getHome().dimensionLines).toHaveLength(2)
+  })
+})
+
+describe('label tool state machine', () => {
+  it('one click places a label at that point with placeholder text', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('label')
+    click(40, 60)
+
+    const home = store.getHome()
+    expect(home.labels).toHaveLength(1)
+    const label = home.labels[0]!
+    expect(label.x).toBe(40)
+    expect(label.y).toBe(60)
+    expect(typeof label.text).toBe('string')
+    expect(label.text.length).toBeGreaterThan(0)
+    expect(home.selection).toEqual([label.id])
+  })
+
+  it('undo removes the created label in one step (create+select compounded)', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('label')
+    click(5, 5)
+
+    expect(store.getHome().labels).toHaveLength(1)
+    expect(store.canUndo()).toBe(true)
+    store.undo()
+    expect(store.getHome().labels).toHaveLength(0)
+    expect(store.canUndo()).toBe(false)
+  })
+
+  it('each click places a new, independent label', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('label')
+    click(0, 0)
+    click(100, 100)
+    expect(store.getHome().labels).toHaveLength(2)
+  })
+})

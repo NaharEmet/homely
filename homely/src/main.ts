@@ -200,8 +200,8 @@ function buildToolbar(): void {
       <button class="tool-btn" data-tool="selection" title="Selection (V)">Select</button>
       <button class="tool-btn" data-tool="wall" title="Wall tool (W)">Wall</button>
       <button class="tool-btn" data-tool="room" title="Room tool">Room</button>
-      <button class="tool-btn" data-tool="dimensionLine" title="Dimension — coming soon" disabled>Dim</button>
-      <button class="tool-btn" data-tool="label" title="Text — coming soon" disabled>Text</button>
+      <button class="tool-btn" data-tool="dimensionLine" title="Dimension tool">Dim</button>
+      <button class="tool-btn" data-tool="label" title="Text tool">Text</button>
       <button class="tool-btn" id="btn-catalog" title="Furniture catalog (F)">Furniture</button>
     </div>
     <div class="tool-separator"></div>
