@@ -104,6 +104,24 @@ function modelLoader(): GLTFLoader {
 }
 
 /**
+ * Cache of loaded GLTF scenes keyed by resolved URL. The view rebuilds the
+ * whole scene on every store change (View3D.render-on-demand), and a GLTF
+ * load is async — so an in-flight load used to mutate a mesh that had already
+ * been detached by the next rebuild, and the model was lost (furniture stayed
+ * a gray box, or vanished). Caching lets rebuilds add the model SYNCHRONOUSLY,
+ * so it renders in the same frame as the rebuild with no async gap.
+ */
+const modelCache = new Map<string, THREE.Object3D>()
+
+function getCachedModel(url: string): THREE.Object3D | null {
+  return modelCache.get(url) ?? null
+}
+
+function cacheModel(url: string, obj: THREE.Object3D): void {
+  if (!modelCache.has(url)) modelCache.set(url, obj)
+}
+
+/**
  * Resolve a furniture's modelPath to a fetchable URL. Bundled models live at
  * `assets/<modelPath>`; user-imported models may live under a different scheme
  * (blob:, custom protocol). Override via View3DOptions.modelUrlResolver.
@@ -135,25 +153,45 @@ function fitModelToBox(model: THREE.Object3D, item: Furniture): THREE.Object3D {
 }
 
 /**
- * Async: load the GLTF at modelPath and swap it in. On any failure (missing
- * file, parse error, unsupported environment) the colored box is kept. The
- * model is fetched from the local bundle (`assets/<modelPath>`) — never the
- * network — so there is no runtime dependency on an external host.
+ * Swap a loaded GLTF model into the furniture mesh. The model is added as a
+ * child of the box mesh; the box geometry is then collapsed to 0 so only the
+ * model shows. On any failure (missing file, parse error, unsupported
+ * environment) the colored box is kept as a visible fallback.
+ *
+ * `onReady` is invoked once after an async (cache-miss) load completes, so the
+ * caller can trigger a re-render — without it the swapped-in model would sit
+ * un-drawn until the next camera move / store change.
  */
-function swapInModel(mesh: THREE.Mesh, item: Furniture): void {
+function swapInModel(mesh: THREE.Mesh, item: Furniture, onReady?: () => void): void {
   if (!item.modelPath) return
-  const loader = modelLoader()
   const url = activeModelUrlResolver(item.modelPath)
+
+  const addModel = (source: THREE.Object3D): void => {
+    const model = fitModelToBox(source.clone(), item)
+    // Mark every mesh in the subtree shared so disposeSceneObjects skips
+    // disposing geometry/material that the cache still owns.
+    model.traverse((o) => {
+      o.userData.shared = true
+    })
+    mesh.geometry.dispose()
+    mesh.geometry = new THREE.BoxGeometry(0, 0, 0)
+    mesh.add(model)
+  }
+
+  const cached = getCachedModel(url)
+  if (cached) {
+    addModel(cached)
+    return
+  }
+
+  const loader = modelLoader()
   try {
     loader.load(
       url,
       (gltf) => {
-        const model = fitModelToBox(gltf.scene, item)
-        // Keep the box as a visible fallback until the model parses, then swap
-        // its geometry out (dispose the placeholder) and add the model on top.
-        mesh.geometry.dispose()
-        mesh.geometry = new THREE.BoxGeometry(0, 0, 0)
-        mesh.add(model)
+        cacheModel(url, gltf.scene)
+        addModel(gltf.scene)
+        onReady?.()
       },
       undefined,
       () => {
@@ -166,7 +204,7 @@ function swapInModel(mesh: THREE.Mesh, item: Furniture): void {
   }
 }
 
-function furnitureMesh(item: Furniture, elevation: number): THREE.Mesh {
+function furnitureMesh(item: Furniture, elevation: number, onReady?: () => void): THREE.Mesh {
   const geometry = new THREE.BoxGeometry(item.width, item.height, item.depth)
   const material = new THREE.MeshStandardMaterial({
     color: item.color ?? DEFAULT_FURNITURE_COLOR,
@@ -179,7 +217,7 @@ function furnitureMesh(item: Furniture, elevation: number): THREE.Mesh {
   mesh.rotation.y = -THREE.MathUtils.degToRad(item.angleDeg)
   mesh.castShadow = true
   mesh.receiveShadow = true
-  swapInModel(mesh, item)
+  swapInModel(mesh, item, onReady)
   return mesh
 }
 
@@ -201,17 +239,20 @@ function applySelectionHighlight(scene: THREE.Scene, selectionSet: Set<string>):
 }
 
 /** Full scene rebuild from a normalized home snapshot. Deterministic. */
-export function buildScene(home: NormalizedHomeState, options?: { modelUrlResolver?: ModelUrlResolver }): THREE.Scene {
+export function buildScene(
+  home: NormalizedHomeState,
+  options?: { modelUrlResolver?: ModelUrlResolver; onModelReady?: () => void },
+): THREE.Scene {
   const previousResolver = activeModelUrlResolver
   if (options?.modelUrlResolver) activeModelUrlResolver = options.modelUrlResolver
   try {
-    return buildSceneInner(home)
+    return buildSceneInner(home, options?.onModelReady)
   } finally {
     activeModelUrlResolver = previousResolver
   }
 }
 
-function buildSceneInner(home: NormalizedHomeState): THREE.Scene {
+function buildSceneInner(home: NormalizedHomeState, onModelReady?: () => void): THREE.Scene {
   const scene = new THREE.Scene()
   if (home.environment.skyColor !== null) {
     scene.background = new THREE.Color(home.environment.skyColor)
@@ -263,7 +304,7 @@ function buildSceneInner(home: NormalizedHomeState): THREE.Scene {
   }
   for (const item of home.furniture) {
     if (item.visible === false) continue
-    root.add(furnitureMesh(item, elevationFor(item.levelRef, elevations)))
+    root.add(furnitureMesh(item, elevationFor(item.levelRef, elevations), onModelReady))
   }
   scene.add(root)
 

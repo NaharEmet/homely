@@ -74,7 +74,10 @@ export class View3D {
     this.modelUrlResolver = options.modelUrlResolver ?? ((path: string) => `assets/${path}`)
     this.isPlacing = options.isPlacing
     this.onFloorClick = options.onFloorClick
-    this._scene = buildScene(store.getHome(), { modelUrlResolver: this.modelUrlResolver })
+    this._scene = buildScene(store.getHome(), {
+      modelUrlResolver: this.modelUrlResolver,
+      onModelReady: () => this.startAnimationLoop(),
+    })
     this.perspectiveCamera = new THREE.PerspectiveCamera(63, 4 / 3, 1, 500_000)
     this.perspectiveCamera.rotation.order = 'YXZ'
     this.unobserve = observeStore(store, () => this.onStoreChanged())
@@ -254,7 +257,10 @@ export class View3D {
     }
 
     this.disposeSceneObjects(this._scene)
-    this._scene = buildScene(this.store.getHome(), { modelUrlResolver: this.modelUrlResolver })
+    this._scene = buildScene(this.store.getHome(), {
+      modelUrlResolver: this.modelUrlResolver,
+      onModelReady: () => this.startAnimationLoop(),
+    })
     this.applyQualityToScene()
 
     if (this.controls && savedTarget && savedPosition) {
@@ -441,6 +447,9 @@ export class View3D {
     scene.traverse((object) => {
       const mesh = object as THREE.Mesh
       if (!mesh.isMesh) return
+      // GLTF model children are shared with the scene.ts model cache; their
+      // geometry/material are owned by the cache and must not be disposed here.
+      if (mesh.userData.shared) return
       mesh.geometry.dispose()
       const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       for (const material of materials) material.dispose()
