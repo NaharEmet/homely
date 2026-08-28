@@ -1,0 +1,22 @@
+name: Furniture placement and 3D render
+description: Place two catalog furniture items (GLB models) via add_furniture with catalogId; assert both land in state and render in 3D.
+target:
+  os: [linux]
+  mode: [web]
+setup: []
+steps:
+  - command: add_room
+    params: {points: [[0, 0], [600, 0], [600, 400], [0, 400]]}
+  - command: add_furniture
+    params: {catalogId: "eTeks#sofa2", x: 300, y: 200}
+  - command: add_furniture
+    params: {catalogId: "eTeks#armchair", x: 120, y: 120}
+checkpoints:
+  - afterStep: 3
+    capture: [state, plan, 3d]
+assertions:
+  - at: 3
+    artifact: state
+    kind: count
+    path: furniture
+    value: 2
