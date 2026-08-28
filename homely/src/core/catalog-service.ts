@@ -85,7 +85,7 @@ export function toWireItem(item: CatalogItem): {
 export function resolvePlacement(
   catalog: FurnitureCatalog,
   catalogId: string,
-): Pick<CatalogItem, 'catalogId' | 'name' | 'width' | 'depth' | 'height' | 'elevation' | 'color' | 'doorOrWindow'> {
+): Pick<CatalogItem, 'catalogId' | 'name' | 'width' | 'depth' | 'height' | 'elevation' | 'color' | 'doorOrWindow' | 'modelPath'> {
   const item = catalog.get(catalogId)
   if (!item) {
     throw new ModelError(`unknown catalogId: ${catalogId}`)
@@ -99,5 +99,6 @@ export function resolvePlacement(
     elevation: item.elevation ?? 0,
     color: item.color ?? null,
     doorOrWindow: item.doorOrWindow ?? false,
+    modelPath: item.modelPath ?? null,
   }
 }

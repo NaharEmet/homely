@@ -1,0 +1,13 @@
+name: Doors windows cutouts
+description: Attempt to add a door/window cutout. These commands are not implemented; expect UNKNOWN_COMMAND -> missing feature ledger entry.
+target:
+  os: [linux]
+  mode: [web]
+setup: []
+steps:
+  - command: add_door
+    params: {wallId: "w1", x: 100, width: 90}
+  - command: add_window
+    params: {wallId: "w1", x: 200, width: 120}
+checkpoints: []
+assertions: []

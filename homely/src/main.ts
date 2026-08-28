@@ -8,6 +8,7 @@ import { FurnitureCatalog } from './core/catalog'
 import { loadDefaultCatalog } from './core/catalog-service'
 import { CatalogPanel } from './ui/catalog-panel'
 import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
+import { snapFurniturePlacement } from './plan/furniture-snap'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 
 import { View3D, type CameraPresetName } from './view3d'
@@ -508,9 +509,19 @@ canvas.addEventListener('pointerup', (event) => {
   pointer.down = false
   const point = eventModelPoint(event)
 
-  // Catalog place mode: a plain click commits the armed piece at the point.
+  // Catalog place mode: a plain click commits the armed piece at the point,
+  // snapped to the nearest wall when magnetism is on.
   if (!pointer.moved && catalogPanel?.isArmed()) {
-    catalogPanel.place(point.x, point.y)
+    const item = catalogPanel.armedItem
+    const snap = item
+      ? snapFurniturePlacement({
+          walls: store.getHome().walls,
+          point,
+          depthCm: item.depth,
+          magnetismEnabled: engine.isMagnetismEnabled(),
+        })
+      : { x: point.x, y: point.y, angleDeg: 0 }
+    catalogPanel.place(snap.x, snap.y, snap.angleDeg)
     refreshToolbar()
     refreshStatus()
     return
@@ -673,6 +684,22 @@ requestAnimationFrame(frame)
 view3d = new View3D(store, {
   container: root.querySelector<HTMLDivElement>('#view3d')!,
   modelUrlResolver,
+  // Placement in the 3D view: when a catalog piece is armed, a click on the
+  // floor places it (snapped to walls), mirroring the 2D plan flow.
+  isPlacing: () => catalogPanel?.isArmed() ?? false,
+  onFloorClick: (p) => {
+    if (!catalogPanel?.isArmed()) return
+    const item = catalogPanel.armedItem!
+    const snap = snapFurniturePlacement({
+      walls: store.getHome().walls,
+      point: p,
+      depthCm: item.depth,
+      magnetismEnabled: engine.isMagnetismEnabled(),
+    })
+    catalogPanel.place(snap.x, snap.y, snap.angleDeg)
+    refreshToolbar()
+    refreshStatus()
+  },
 })
 // Expose for E2E testing
 ;(window as unknown as { __view3d: View3D }).__view3d = view3d
@@ -712,6 +739,7 @@ const catalogReady = loadDefaultCatalog().then(async ({ catalog }) => {
         elevation: item.elevation ?? 0,
         color: item.color ?? null,
         doorOrWindow: item.doorOrWindow ?? false,
+        modelPath: item.modelPath ?? null,
       })
       model.setSelection([placed.id])
       refreshToolbar()
@@ -720,6 +748,8 @@ const catalogReady = loadDefaultCatalog().then(async ({ catalog }) => {
     },
     onPlaceModeChange: (active) => {
       canvas.style.cursor = active ? 'crosshair' : ''
+      const v3 = document.querySelector<HTMLCanvasElement>('#view3d canvas')
+      if (v3) v3.style.cursor = active ? 'crosshair' : ''
     },
     onImportModel: () => {
       importModelFile()

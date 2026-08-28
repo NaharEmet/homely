@@ -189,11 +189,11 @@ class Orchestrator:
             data = await asyncio.wait_for(adapter.request(command, params), REQUEST_TIMEOUT)
             return True, {"data": data}
         except AdapterError as exc:
-            return False, {"error": exc.error, "code": exc.code}
+            return False, {"command": command, "error": exc.error, "code": exc.code}
         except TimeoutError:
-            return False, {"error": f"timeout after {REQUEST_TIMEOUT}s", "code": "TIMEOUT"}
+            return False, {"command": command, "error": f"timeout after {REQUEST_TIMEOUT}s", "code": "TIMEOUT"}
         except Exception as exc:  # noqa: BLE001 - transport/impl failures become error records
-            return False, {"error": str(exc), "code": "INTERNAL"}
+            return False, {"command": command, "error": str(exc), "code": "INTERNAL"}
 
     async def _capture(
         self,

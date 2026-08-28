@@ -144,6 +144,7 @@ export class HomelyCommandHandler implements CommandHandler {
         let elevation = params.elevation === undefined ? 0 : requireNumber(params, 'elevation')
         let color: number | null = null
         let doorOrWindow = false
+        let modelPath: string | null = null
 
         if (catalogId !== null && this.catalog) {
           const resolved = resolvePlacement(this.catalog, catalogId)
@@ -154,6 +155,7 @@ export class HomelyCommandHandler implements CommandHandler {
           if (params.elevation === undefined) elevation = resolved.elevation!
           color = resolved.color ?? null
           doorOrWindow = resolved.doorOrWindow ?? false
+          modelPath = resolved.modelPath ?? null
         } else {
           const nameParam = params.name
           assert(
@@ -178,6 +180,7 @@ export class HomelyCommandHandler implements CommandHandler {
           elevation,
           color,
           doorOrWindow,
+          modelPath,
         })
         return { ok: true, data: { id: furniture.id } }
       }
@@ -206,6 +209,7 @@ export class HomelyCommandHandler implements CommandHandler {
           elevation: params.elevation === undefined ? resolved.elevation! : requireNumber(params, 'elevation'),
           color: resolved.color ?? null,
           doorOrWindow: resolved.doorOrWindow ?? false,
+          modelPath: resolved.modelPath ?? null,
         })
         return { ok: true, data: { id: furniture.id } }
       }

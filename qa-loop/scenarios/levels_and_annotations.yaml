@@ -1,0 +1,32 @@
+name: Levels dimensions labels
+description: Exercise levels, dimension lines and labels; assert they land in home state.
+target:
+  os: [linux]
+  mode: [web]
+setup: []
+steps:
+  - command: add_level
+    params: {name: "Upper", elevation: 300, floorThickness: 30}
+  - command: add_dimension_line
+    params: {xStart: 0, yStart: 0, xEnd: 600, yEnd: 0, offset: 0}
+  - command: add_label
+    params: {x: 300, y: 200, text: "Kitchen"}
+checkpoints:
+  - afterStep: 3
+    capture: [state, plan, 3d]
+assertions:
+  - at: 3
+    artifact: state
+    kind: count
+    path: levels
+    value: 1
+  - at: 3
+    artifact: state
+    kind: count
+    path: dimensionLines
+    value: 1
+  - at: 3
+    artifact: state
+    kind: count
+    path: labels
+    value: 1

@@ -48,6 +48,13 @@ COMMANDS: frozenset[str] = frozenset(
         "get_state",
         "screenshot",
         "get_capabilities",
+        "add_room",
+        "remove_level",
+        "add_level",
+        "add_dimension_line",
+        "add_label",
+        "add_door",
+        "add_window",
     }
 )
 
@@ -85,6 +92,13 @@ REQUIRED_PARAMS: dict[str, dict[str, tuple[type, ...]]] = {
     },
     "camera_preset": {"preset": (str,)},
     "screenshot": {"view": (str,), "width": (int,), "height": (int,)},
+    "add_room": {"points": (list,)},
+    "remove_level": {"id": (str,)},
+    "add_level": {"name": (str,), "elevation": Number, "floorThickness": Number},
+    "add_dimension_line": {"xStart": Number, "yStart": Number, "xEnd": Number, "yEnd": Number},
+    "add_label": {"x": Number, "y": Number},
+    "add_door": {"wallId": (str,)},
+    "add_window": {"wallId": (str,)},
 }
 
 # command -> {param: allowed python types} for OPTIONAL params worth type-checking.

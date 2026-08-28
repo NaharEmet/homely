@@ -1,0 +1,39 @@
+name: Basic rectangular room
+description: Draw a closed 4-wall room with a floor via the wall tool + add_room, assert geometry exists.
+target:
+  os: [linux]
+  mode: [web]
+setup: []
+steps:
+  - command: set_view
+    params: {view: plan}
+  - command: select_tool
+    params: {tool: wall}
+  - command: set_magnetism
+    params: {enabled: false}
+  - command: click
+    params: {x: 0, y: 0}
+  - command: click
+    params: {x: 600, y: 0}
+  - command: click
+    params: {x: 600, y: 400}
+  - command: click
+    params: {x: 0, y: 400}
+  - command: click
+    params: {x: 0, y: 0, dbl: true}
+  - command: add_room
+    params: {points: [[0, 0], [600, 0], [600, 400], [0, 400]]}
+checkpoints:
+  - afterStep: 9
+    capture: [state, plan, 3d]
+assertions:
+  - at: 9
+    artifact: state
+    kind: count
+    path: walls
+    value: 4
+  - at: 9
+    artifact: state
+    kind: count
+    path: rooms
+    value: 1

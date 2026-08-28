@@ -1,0 +1,18 @@
+[
+  {
+    "phase": "steps",
+    "step": 1,
+    "adapter": "homely",
+    "command": "add_door",
+    "error": "unknown command: add_door",
+    "code": "UNKNOWN_COMMAND"
+  },
+  {
+    "phase": "steps",
+    "step": 2,
+    "adapter": "homely",
+    "command": "add_window",
+    "error": "unknown command: add_window",
+    "code": "UNKNOWN_COMMAND"
+  }
+]

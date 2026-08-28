@@ -1,0 +1,59 @@
+[
+  {
+    "phase": "steps",
+    "step": 1,
+    "command": "add_level",
+    "params": {
+      "name": "Upper",
+      "elevation": 300,
+      "floorThickness": 30
+    },
+    "responses": {
+      "homely": {
+        "ok": true,
+        "data": {
+          "id": "level-6"
+        }
+      }
+    },
+    "elapsedMs": 63.018
+  },
+  {
+    "phase": "steps",
+    "step": 2,
+    "command": "add_dimension_line",
+    "params": {
+      "xStart": 0,
+      "yStart": 0,
+      "xEnd": 600,
+      "yEnd": 0
+    },
+    "responses": {
+      "homely": {
+        "ok": false,
+        "error": "param offset must be a finite number",
+        "code": "INVALID_PARAMS"
+      }
+    },
+    "elapsedMs": 3.335
+  },
+  {
+    "phase": "steps",
+    "step": 3,
+    "command": "add_label",
+    "params": {
+      "x": 300,
+      "y": 200,
+      "text": "Kitchen"
+    },
+    "responses": {
+      "homely": {
+        "ok": true,
+        "data": {
+          "id": "label-7"
+        }
+      }
+    },
+    "elapsedMs": 79.101
+  }
+]

@@ -26,6 +26,13 @@ export interface View3DOptions {
    * `assets/<path>`; pass a resolver that maps user blob keys to blob URLs.
    */
   modelUrlResolver?: ModelUrlResolver
+  /**
+   * When truthy, a non-drag click on the 3D floor places furniture instead of
+   * selecting. Driven by the catalog's armed (place) state.
+   */
+  isPlacing?: () => boolean
+  /** Called with the model-space floor point of a placement click. */
+  onFloorClick?: (point: { x: number; y: number }) => void
 }
 
 /**
@@ -53,13 +60,20 @@ export class View3D {
   }
   private _quality: ViewportQuality
   private readonly modelUrlResolver: ModelUrlResolver
+  private readonly model: HomeModel
+  private readonly pointerDown = { x: 0, y: 0 }
+  private readonly isPlacing?: () => boolean
+  private readonly onFloorClick?: (point: { x: number; y: number }) => void
 
   constructor(
     private readonly store: HomeStore,
     options: View3DOptions = {},
   ) {
-    this.director = new CameraDirector(store, new HomeModel(store))
+    this.model = new HomeModel(store)
+    this.director = new CameraDirector(store, this.model)
     this.modelUrlResolver = options.modelUrlResolver ?? ((path: string) => `assets/${path}`)
+    this.isPlacing = options.isPlacing
+    this.onFloorClick = options.onFloorClick
     this._scene = buildScene(store.getHome(), { modelUrlResolver: this.modelUrlResolver })
     this.perspectiveCamera = new THREE.PerspectiveCamera(63, 4 / 3, 1, 500_000)
     this.perspectiveCamera.rotation.order = 'YXZ'
@@ -114,6 +128,24 @@ export class View3D {
         this.resizeTo(w, h)
       })
       this.resizeObserver.observe(container)
+
+      // Click-to-select: a pointerup that didn't drag (orbit) raycasts the
+      // scene and selects the hit furniture/wall. Selection drives the camera
+      // recenter in onStoreChanged(); OrbitControls swipe is left untouched.
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        this.pointerDown.x = e.clientX
+        this.pointerDown.y = e.clientY
+      })
+      renderer.domElement.addEventListener('pointerup', (e) => {
+        const moved = Math.hypot(e.clientX - this.pointerDown.x, e.clientY - this.pointerDown.y)
+        if (moved > 5) return
+        if (this.onFloorClick && this.isPlacing?.()) {
+          const p = this.floorPoint(e)
+          if (p) this.onFloorClick(p)
+          return
+        }
+        this.pick(e)
+      })
     }
   }
 
@@ -295,6 +327,54 @@ export class View3D {
     this.controls.target.copy(center)
     this.controls.update()
     this.startAnimationLoop()
+  }
+
+  /**
+   * Raycast a click into the scene and select the topmost furniture/wall under
+   * the cursor. Names follow the `furniture:<id>` / `wall:<id>` convention set
+   * in scene.ts; GLTF children inherit the parent mesh's name after walking up.
+   */
+  private pick(e: PointerEvent): void {
+    if (!this.renderer) return
+    const rect = this.renderer.domElement.getBoundingClientRect()
+    const ndc = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1,
+    )
+    const raycaster = new THREE.Raycaster()
+    raycaster.setFromCamera(ndc, this.perspectiveCamera)
+    const hits = raycaster.intersectObjects(this._scene.children, true)
+    for (const hit of hits) {
+      let o: THREE.Object3D | null = hit.object
+      while (o) {
+        const id = /^furniture:(.+)$/.exec(o.name)?.[1] ?? /^wall:(.+)$/.exec(o.name)?.[1]
+        if (id) {
+          this.model.setSelection([id])
+          return
+        }
+        o = o.parent
+      }
+    }
+  }
+
+  /**
+   * Raycast a click onto the floor plane (world y = 0) and return the model
+   * point (plan x → world x, plan y → world z). Returns null if the ray is
+   * parallel to the floor. Used for 3D furniture placement.
+   */
+  private floorPoint(e: PointerEvent): { x: number; y: number } | null {
+    if (!this.renderer) return null
+    const rect = this.renderer.domElement.getBoundingClientRect()
+    const ndc = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1,
+    )
+    const raycaster = new THREE.Raycaster()
+    raycaster.setFromCamera(ndc, this.perspectiveCamera)
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+    const hit = new THREE.Vector3()
+    if (!raycaster.ray.intersectPlane(plane, hit)) return null
+    return { x: hit.x, y: hit.z }
   }
 
   /** Draw the current scene. Does NOT advance controls (that's the loop). */

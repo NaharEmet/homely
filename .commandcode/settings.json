@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(cd /home/nahar/Documents/code/house_designer && echo \"---root gitignore---\" && cat .gitignore 2>/dev/null && echo \"---assets ignored?---\" && git check-ignore -v homely/assets/textures/wood-oak.png homely/public homely/assets 2>/dev/null; echo \"exit: $?\")",
+      "Shell(git:*)",
+      "Shell(npm:*)",
+      "Shell(npx tsc --noEmit 2 >& 1)",
+      "Shell(./node_modules/.bin/tsc:*)",
+      "Shell(npx eslint . 2 >& 1)",
+      "Shell(npx eslint scripts/assets.ts src tests/catalog.test.ts src/main.ts src/ui/catalog-panel.ts src/core/catalog.ts src/core/catalog-service.ts src/automation/homely-handler.ts 2 >& 1)",
+      "Shell(rm:*)",
+      "Shell(npx vite --port 5199 --strictPort > /tmp/vite-catalog-test.log 2 >& 1)",
+      "Shell(sleep:*)",
+      "Shell(curl -s http://localhost:5199/assets/catalog/catalog.json)",
+      "Shell(curl -s -o /dev/null -w %{http_code} http://localhost:5199/assets/textures/wood-oak.png)",
+      "Shell(pkill -f \"vite --port 5199\" 2>/dev/null; sleep 1; curl -s -o /dev/null -w \"%{http_code}\" --max-time 2 http://localhost:5199/ 2>/dev/null || echo \"stopped\")",
+      "Shell(curl -s -o /dev/null -w %{http_code} --max-time 2 http://localhost:5199/ 2 > /dev/null)",
+      "Shell(echo:*)",
+      "Shell(npx eslint scripts/assets.ts src tests/catalog.test.ts 2 >& 1)",
+      "Shell(cd /home/nahar/Documents/code/house_designer/homely && node -e \"console.log(require('three/package.json').version)\" 2>/dev/null; ls node_modules/three/examples/jsm/loaders/GLTFLoader.js 2>/dev/null && echo \"GLTFLoader present\"; ls node_modules/.bin/ | grep -i gltf 2>/dev/null; echo \"no gltf cli\")",
+      "Shell(npx tsx scripts/generate-models.ts 2 >& 1)",
+      "Shell(ls:*)",
+      "Shell(node -e  const { readFileSync } = require('fs'); const buf = readFileSync('assets/models/sofa-3-seater.glb'); // GLB magic + version check console.log('magic:', buf.readUInt32LE(0).toString(16)); // 46546c67 = 'glTF' console.log('version:', buf.readUInt32LE(4)); console.log('total len:', buf.readUInt32LE(8), 'file len:', buf.length); const jsonLen = buf.readUInt32LE(12); const json = JSON.parse(buf.subarray(20, 20 + jsonLen).toString()); console.log('json chunk ok, meshes:', json.meshes?.length, 'materials:', json.materials?.length, 'nodes:', json.nodes?.length); )",
+      "Shell(node -e  const fs = require('fs'); const path = 'assets/catalog/catalog.json'; const manifest = JSON.parse(fs.readFileSync(path, 'utf8')); for (const item of manifest.items) { item.modelPath = 'models/' + item.catalogId + '.glb'; } fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + '\\n'); console.log('updated', manifest.items.length, 'items'); )",
+      "Shell(npx eslint scripts/generate-models.ts src/view3d/scene.ts src/ui/model-thumbnail.ts src/ui/catalog-panel.ts 2 >& 1)",
+      "Shell(npx vite --port 5199 --strictPort > /tmp/vite-model-test.log 2 >& 1)",
+      "Shell(curl -s -o /dev/null -w sofa glb: %{http_code}\\n http://localhost:5199/assets/models/sofa-3-seater.glb)",
+      "Shell(curl -s -o /dev/null -w catalog: %{http_code}\\n http://localhost:5199/assets/catalog/catalog.json)",
+      "Shell(curl -s http://localhost:5199/assets/models/sofa-3-seater.glb)",
+      "Shell(xxd:*)",
+      "Shell(pkill -f \"vite --port 5199\" 2>/dev/null; sleep 1; echo \"stopped\")",
+      "Shell(grep:*)",
+      "Shell(npx eslint src/view3d/view.ts src/view3d/viewport-quality.ts 2 >& 1)",
+      "Shell(npx eslint src/core/user-catalog.ts src/view3d/scene.ts src/view3d/view.ts 2 >& 1)",
+      "Shell(npx eslint src/main.ts src/ui/catalog-panel.ts src/core/user-catalog.ts 2 >& 1)",
+      "Shell(node -e  const m = JSON.parse(require('fs').readFileSync('assets/catalog/catalog.json','utf8')); console.log('items:', m.items.length); const withModel = m.items.filter(i => i.modelPath).length; const withHash = m.items.filter(i => i.catalogId.includes('#')).length; console.log('with modelPath:', withModel, '| catalogIds with #:', withHash); console.log('sample:', JSON.stringify(m.items[0])); console.log('sample hash:', JSON.stringify(m.items.find(i=>i.catalogId.includes('#')))); )",
+      "Shell(node -e  const fs = require('fs'); const path = 'assets/catalog/catalog.json'; const m = JSON.parse(fs.readFileSync(path, 'utf8')); const slug = (id) => id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'model'; for (const item of m.items) item.modelPath = 'models/' + slug(item.catalogId) + '.glb'; fs.writeFileSync(path, JSON.stringify(m, null, 2) + '\\n'); console.log('added modelPath to', m.items.length, 'items'); )"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

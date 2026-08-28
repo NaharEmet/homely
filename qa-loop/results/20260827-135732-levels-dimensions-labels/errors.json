@@ -1,0 +1,9 @@
+[
+  {
+    "phase": "steps",
+    "step": 2,
+    "adapter": "homely",
+    "error": "param offset must be a finite number",
+    "code": "INVALID_PARAMS"
+  }
+]

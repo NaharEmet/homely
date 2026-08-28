@@ -1,0 +1,47 @@
+{
+  "generated": "2026-08-27T13:58:45Z",
+  "wsPort": 41711,
+  "scenarios": [
+    {
+      "scenario": "basic_room.yaml",
+      "runId": "20260827-135837-basic-rectangular-room",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260827-135837-basic-rectangular-room",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
+    },
+    {
+      "scenario": "doors_windows.yaml",
+      "runId": "20260827-135844-doors-windows-cutouts",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260827-135844-doors-windows-cutouts",
+      "ok": false,
+      "errorCount": 2,
+      "errors": [
+        {
+          "phase": "steps",
+          "step": 1,
+          "adapter": "homely",
+          "command": "add_door",
+          "error": "unknown command: add_door",
+          "code": "UNKNOWN_COMMAND"
+        },
+        {
+          "phase": "steps",
+          "step": 2,
+          "adapter": "homely",
+          "command": "add_window",
+          "error": "unknown command: add_window",
+          "code": "UNKNOWN_COMMAND"
+        }
+      ]
+    },
+    {
+      "scenario": "levels_and_annotations.yaml",
+      "runId": "20260827-135844-levels-dimensions-labels",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260827-135844-levels-dimensions-labels",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
+    }
+  ]
+}
