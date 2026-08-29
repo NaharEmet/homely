@@ -14,8 +14,10 @@ import { loadHomeFile, saveHomeFile } from '../src/services/adapters/home-persis
  *   logged and rethrown as a wrapped Error with a clear message (save has no
  *   browser-path failure mode to mirror, so the caller (main.ts) can
  *   catch-and-alert).
- * - loadHomeFile: readText rejections and parseHomeFile failures behave like
- *   the browser path — console.error + resolve null (never throw).
+ * - loadHomeFile: resolves null ONLY for user-cancel (no path selected).
+ *   A genuine readText rejection or parseHomeFile failure is logged and
+ *   rethrown as a wrapped Error so the caller (main.ts) can distinguish it
+ *   from cancel and alert the user.
  */
 
 const mocks = vi.hoisted(() => ({
@@ -83,21 +85,23 @@ describe('loadHomeFile (Tauri path)', () => {
     vi.restoreAllMocks()
   })
 
-  it('readText rejection resolves null (mirrors browser-path error handling)', async () => {
+  it('readText rejection throws a clear Error (distinct from cancel)', async () => {
     mocks.readText.mockRejectedValue(new Error('file vanished'))
-    await expect(loadHomeFile()).resolves.toBeNull()
+    await expect(loadHomeFile()).rejects.toThrow(
+      `Failed to load home file from ${PATH}: file vanished`,
+    )
     expect(console.error).toHaveBeenCalledWith('Failed to load home file:', expect.any(Error))
   })
 
-  it('malformed JSON resolves null', async () => {
+  it('malformed JSON throws', async () => {
     mocks.readText.mockResolvedValue('{"levelCount":')
-    await expect(loadHomeFile()).resolves.toBeNull()
+    await expect(loadHomeFile()).rejects.toThrow(/Failed to load home file from /)
     expect(console.error).toHaveBeenCalledWith('Failed to load home file:', expect.any(Error))
   })
 
-  it('valid JSON but invalid project shape resolves null', async () => {
+  it('valid JSON but invalid project shape throws', async () => {
     mocks.readText.mockResolvedValue('42')
-    await expect(loadHomeFile()).resolves.toBeNull()
+    await expect(loadHomeFile()).rejects.toThrow(/Failed to load home file from /)
     expect(console.error).toHaveBeenCalledWith('Failed to load home file:', expect.any(Error))
   })
 

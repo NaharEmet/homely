@@ -182,19 +182,27 @@ function refreshMenus(): void {
         {
           label: 'Save',
           action: async () => {
-            await saveHomeFile(store.getHome())
-            store.markClean()
+            try {
+              await saveHomeFile(store.getHome())
+              store.markClean()
+            } catch (err) {
+              alert(err instanceof Error ? err.message : `Failed to save home file: ${String(err)}`)
+            }
           },
         },
         {
           label: 'Open',
           action: async () => {
             if (store.isDirty() && !confirm('Unsaved changes will be lost. Continue?')) return
-            const home = await loadHomeFile()
-            if (home) {
-              store.loadHome(home)
-              doFit()
-              refreshAll()
+            try {
+              const home = await loadHomeFile()
+              if (home) {
+                store.loadHome(home)
+                doFit()
+                refreshAll()
+              }
+            } catch (err) {
+              alert(err instanceof Error ? err.message : `Failed to load home file: ${String(err)}`)
             }
           },
         },

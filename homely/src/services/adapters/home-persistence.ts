@@ -50,7 +50,13 @@ export async function saveHomeFile(home: NormalizedHomeState): Promise<void> {
   URL.revokeObjectURL(url)
 }
 
-/** Load a home from disk. Tauri: native open dialog. Browser: file input. Null if cancelled. */
+/**
+ * Load a home from disk. Tauri: native open dialog. Browser: file input.
+ *
+ * Resolves null ONLY when the user cancels (no path / no file selected). A
+ * genuine read or parse failure throws a clear Error so the caller
+ * (main.ts) can distinguish it from cancel and surface it to the user.
+ */
 export async function loadHomeFile(): Promise<NormalizedHomeState | null> {
   if (isTauri()) {
     const dialog = await tauriDialog()
@@ -61,10 +67,10 @@ export async function loadHomeFile(): Promise<NormalizedHomeState | null> {
       return parseHomeFile(text)
     } catch (err) {
       console.error('Failed to load home file:', err)
-      return null
+      throw new Error(`Failed to load home file from ${path}: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
-  return await new Promise<NormalizedHomeState | null>((resolve) => {
+  return await new Promise<NormalizedHomeState | null>((resolve, reject) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json,application/json'
@@ -76,9 +82,9 @@ export async function loadHomeFile(): Promise<NormalizedHomeState | null> {
           resolve(parseHomeFile(text))
         } catch (err) {
           console.error('Failed to load home file:', err)
-          resolve(null)
+          reject(new Error(`Failed to load home file from ${file.name}: ${err instanceof Error ? err.message : String(err)}`))
         }
-      })
+      }, reject)
     }
     input.click()
   })
