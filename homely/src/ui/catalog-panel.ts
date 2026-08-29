@@ -296,7 +296,8 @@ export class CatalogPanel {
     }
   }
 
-  private renderStatusMessage(message: string): void {
+  /** Show an import/status message on the panel status line (not 'armed'). */
+  renderStatusMessage(message: string): void {
     this.statusLine.textContent = message
     this.statusLine.classList.remove('armed')
   }

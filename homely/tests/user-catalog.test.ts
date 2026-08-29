@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { FurnitureCatalog } from '../src/core/catalog'
 import {
   InMemoryModelStore,
+  MAX_IMPORT_BYTES,
   UserCatalog,
   slugify,
   toCatalogItem,
+  validateGlbData,
 } from '../src/core/user-catalog'
 import { VIEWPORT_PRESETS, loadViewportQuality, saveViewportQuality } from '../src/view3d/viewport-quality'
 
@@ -101,6 +103,40 @@ describe('user-catalog', () => {
     await user2.refresh()
     expect(user2.userCount).toBe(1)
     expect(user2.merged.size).toBe(2)
+  })
+})
+
+describe('import validation', () => {
+  it('accepts a buffer with a valid GLB header', () => {
+    expect(() => validateGlbData(glbBytes(), 'ok.glb')).not.toThrow()
+  })
+
+  it('rejects non-GLB content (e.g. text renamed to .glb)', () => {
+    const text = new TextEncoder().encode('hello, i am definitely not a glb file')
+    expect(() => validateGlbData(text.buffer, 'fake.glb')).toThrow(/not a GLB/)
+  })
+
+  it('rejects buffers too small to be a GLB', () => {
+    expect(() => validateGlbData(new ArrayBuffer(8), 'tiny.glb')).toThrow(/too small/)
+  })
+
+  it('rejects buffers over the size cap even with a valid magic number', () => {
+    const huge = new ArrayBuffer(MAX_IMPORT_BYTES + 1)
+    new DataView(huge).setUint32(0, 0x46546c67, true)
+    expect(() => validateGlbData(huge, 'huge.glb')).toThrow(/import limit is 50 MB/)
+  })
+
+  it('import refuses invalid data without storing anything', async () => {
+    const store = new InMemoryModelStore()
+    const user = new UserCatalog(bundled, store)
+    await expect(
+      user.import({
+        fileName: 'fake.glb',
+        data: new TextEncoder().encode('definitely not a glb file').buffer,
+      }),
+    ).rejects.toThrow(/not a GLB/)
+    expect(user.userCount).toBe(0)
+    expect(store.list()).resolves.toHaveLength(0)
   })
 })
 

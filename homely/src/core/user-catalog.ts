@@ -14,6 +14,35 @@
 import type { CatalogItem } from './catalog'
 import { FurnitureCatalog } from './catalog'
 
+/**
+ * Hard cap on imported model bytes. All bundled models are ≤ 12 KB and
+ * furniture GLBs are typically well under 20 MB; 50 MB leaves generous
+ * headroom for detailed scans while blocking accidental multi-hundred-MB
+ * memory bombs (an import buffers the bytes ~3×: read, store, blob URL).
+ */
+export const MAX_IMPORT_BYTES = 50 * 1024 * 1024
+
+/** glTF binary magic number: ASCII "glTF", little-endian (glTF 2.0 spec). */
+const GLB_MAGIC = 0x46546c67
+
+/**
+ * Fail fast on structurally invalid imports: size cap + GLB magic number.
+ * Throws an Error whose message is safe to surface in the UI as-is.
+ */
+export function validateGlbData(data: ArrayBuffer, fileName = 'file'): void {
+  if (data.byteLength > MAX_IMPORT_BYTES) {
+    throw new Error(
+      `${fileName} is ${(data.byteLength / 1024 / 1024).toFixed(1)} MB — the import limit is ${MAX_IMPORT_BYTES / 1024 / 1024} MB`,
+    )
+  }
+  if (data.byteLength < 12) {
+    throw new Error(`${fileName} is too small to be a GLB model`)
+  }
+  if (new DataView(data).getUint32(0, true) !== GLB_MAGIC) {
+    throw new Error(`${fileName} is not a GLB model — missing glTF magic number`)
+  }
+}
+
 export interface UserModelInput {
   /** Original file name (used as a default display name). */
   fileName: string
@@ -176,6 +205,7 @@ export class UserCatalog {
 
   /** Import a model file into the store; returns the new record. */
   async import(input: UserModelInput): Promise<UserModelRecord> {
+    validateGlbData(input.data, input.fileName)
     const id = `user-${Date.now().toString(36)}`
     const { record } = toCatalogItem(input, id)
     await this.store.put(record, input.data)
