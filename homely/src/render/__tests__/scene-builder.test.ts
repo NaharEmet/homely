@@ -88,4 +88,85 @@ describe('buildRenderableScene', () => {
     const { scene } = buildRenderableScene(home)
     expect(scene.lights[0]!.color).toBe(0xFF8800)
   })
+
+  // ── Wall opening segmentation (M27) ──────────────────────────
+
+  it('keeps 2 boxes for wall with no openings (backward compat)', () => {
+    const home = createEmptyHome()
+    home.walls.push({
+      id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+    })
+    const { scene } = buildRenderableScene(home)
+    const wallObj = scene.objects.find(o => o.id === 'wall:w1')!
+    const boxes = wallObj.primitives.filter(p => p.type === 'box')
+    expect(boxes.length).toBe(2)
+  })
+
+  it('segments wall into multiple boxes when a door opening is present', () => {
+    const home = createEmptyHome()
+    home.walls.push({
+      id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+    })
+    home.furniture.push({
+      id: 'd1', name: 'Door',
+      x: 200, y: 0, angleDeg: 0,
+      width: 90, depth: 15, height: 210,
+      elevation: 0,
+      doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+    })
+    const { scene } = buildRenderableScene(home)
+    const wallObj = scene.objects.find(o => o.id === 'wall:w1')!
+    const boxes = wallObj.primitives.filter(p => p.type === 'box')
+    // Door (elevation=0, top=210, wall height=250):
+    // left segment 0-155 (2 boxes) + lintel 155-245/210-250 (2 boxes) + right segment 245-400 (2 boxes) = 6
+    expect(boxes.length).toBeGreaterThan(2)
+    expect(boxes.length).toBe(6)
+  })
+
+  it('produces sill and lintel boxes for window openings', () => {
+    const home = createEmptyHome()
+    home.walls.push({
+      id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+    })
+    home.furniture.push({
+      id: 'win1', name: 'Window',
+      x: 200, y: 0, angleDeg: 0,
+      width: 120, depth: 15, height: 120,
+      elevation: 90,
+      doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+    })
+    const { scene } = buildRenderableScene(home)
+    const wallObj = scene.objects.find(o => o.id === 'wall:w1')!
+    const boxes = wallObj.primitives.filter(p => p.type === 'box')
+    // Window (elevation=90, top=210, wall height=250):
+    // left 0-140 (2) + sill 140-260/0-90 (2) + lintel 140-260/210-250 (2) + right 260-400 (2) = 8
+    expect(boxes.length).toBe(8)
+  })
+
+  it('produces different geometry for wall with vs without opening', () => {
+    const homeWithOpening = createEmptyHome()
+    homeWithOpening.walls.push({
+      id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+    })
+    homeWithOpening.furniture.push({
+      id: 'd1', name: 'Door',
+      x: 200, y: 0, angleDeg: 0,
+      width: 90, depth: 15, height: 210,
+      elevation: 0,
+      doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+    })
+
+    const homeWithout = createEmptyHome()
+    homeWithout.walls.push({
+      id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+    })
+
+    const sceneWith = buildRenderableScene(homeWithOpening).scene
+    const sceneWithout = buildRenderableScene(homeWithout).scene
+
+    const boxesWith = sceneWith.objects.find(o => o.id === 'wall:w1')!.primitives.length
+    const boxesWithout = sceneWithout.objects.find(o => o.id === 'wall:w1')!.primitives.length
+
+    expect(boxesWith).toBeGreaterThan(boxesWithout)
+  })
 })

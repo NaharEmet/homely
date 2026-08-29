@@ -63,6 +63,13 @@ class RecordingPlanContext implements PlanRenderingContext {
   setLineDash(dashes: Array<number>): void {
     this.ops.push(['setLineDash', dashes.join(',')])
   }
+  save(): void {
+    this.ops.push(['save'])
+  }
+  restore(): void {
+    this.ops.push(['restore'])
+  }
+  globalCompositeOperation: GlobalCompositeOperation = 'source-over'
 }
 
 interface CallRecord {

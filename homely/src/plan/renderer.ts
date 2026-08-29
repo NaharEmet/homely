@@ -1,4 +1,4 @@
-import type { NormalizedHomeState } from '../core/home'
+import type { NormalizedHomeState, Wall, Furniture } from '../core/home'
 import { wallOutlinePoints } from '../core/top-camera-follower'
 import type { PlanPreview } from './engine'
 
@@ -27,6 +27,9 @@ export interface PlanRenderingContext {
   textAlign: CanvasTextAlign
   textBaseline: CanvasTextBaseline
   setLineDash(dashes: Array<number>): void
+  save(): void
+  restore(): void
+  globalCompositeOperation: GlobalCompositeOperation
 }
 
 const WALL_COLOR = '#5a5a5a'
@@ -183,6 +186,39 @@ function drawGrid(ctx: PlanRenderingContext, view: ViewTransform, width: number,
   ctx.stroke()
 }
 
+/** Door/window openings on a wall — returns center + wall unit vector + half extents. */
+function wallOpenings(
+  wall: Wall,
+  furniture: ReadonlyArray<Furniture>,
+): Array<{ cx: number; cy: number; ux: number; uy: number; halfWidth: number; halfThickness: number }> {
+  const dx = wall.xEnd - wall.xStart
+  const dy = wall.yEnd - wall.yStart
+  const length = Math.hypot(dx, dy)
+  if (length === 0) return []
+  const ux = dx / length
+  const uy = dy / length
+  const results: Array<{ cx: number; cy: number; ux: number; uy: number; halfWidth: number; halfThickness: number }> = []
+  for (const f of furniture) {
+    if (!f.doorOrWindow || f.wallRef !== wall.id) continue
+    let centerDist: number
+    if (f.wallOffset != null) {
+      centerDist = f.wallOffset
+    } else {
+      const t = ((f.x - wall.xStart) * dx + (f.y - wall.yStart) * dy) / (length * length)
+      centerDist = t * length
+    }
+    results.push({
+      cx: wall.xStart + ux * centerDist,
+      cy: wall.yStart + uy * centerDist,
+      ux,
+      uy,
+      halfWidth: f.width / 2,
+      halfThickness: wall.thickness / 2,
+    })
+  }
+  return results
+}
+
 export function drawPlan(
   home: NormalizedHomeState,
   preview: PlanPreview | null,
@@ -261,6 +297,37 @@ export function drawPlan(
       ? SELECTION_COLOR
       : cssColor(wall.leftSideColor, WALL_COLOR)
     ctx.fill()
+
+    // Punch door/window openings through the wall fill.
+    const openings = wallOpenings(wall, home.furniture)
+    if (openings.length > 0) {
+      ctx.save()
+      ctx.globalCompositeOperation = 'destination-out'
+      ctx.fillStyle = '#000000'
+      for (const o of openings) {
+        ctx.beginPath()
+        ctx.moveTo(
+          mapper.sx(o.cx - o.ux * o.halfWidth - o.uy * o.halfThickness),
+          mapper.sy(o.cy - o.uy * o.halfWidth + o.ux * o.halfThickness),
+        )
+        ctx.lineTo(
+          mapper.sx(o.cx + o.ux * o.halfWidth - o.uy * o.halfThickness),
+          mapper.sy(o.cy + o.uy * o.halfWidth + o.ux * o.halfThickness),
+        )
+        ctx.lineTo(
+          mapper.sx(o.cx + o.ux * o.halfWidth + o.uy * o.halfThickness),
+          mapper.sy(o.cy + o.uy * o.halfWidth - o.ux * o.halfThickness),
+        )
+        ctx.lineTo(
+          mapper.sx(o.cx - o.ux * o.halfWidth + o.uy * o.halfThickness),
+          mapper.sy(o.cy - o.uy * o.halfWidth - o.ux * o.halfThickness),
+        )
+        ctx.closePath()
+        ctx.fill()
+      }
+      ctx.restore()
+    }
+
     ctx.strokeStyle = cssColor(wall.rightSideColor, WALL_COLOR)
     ctx.lineWidth = 0.5
     ctx.stroke()

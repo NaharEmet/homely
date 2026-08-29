@@ -18,6 +18,8 @@ import type {
 import {
   DEFAULT_WALL_HEIGHT_CM,
   type NormalizedHomeState,
+  type Wall,
+  type Furniture,
 } from '../core/home'
 
 // ── Defaults ────────────────────────────────────────────────────
@@ -55,6 +57,107 @@ function levelElevationMap(home: NormalizedHomeState): Map<string, number> {
 function elevationFor(ref: string | null | undefined, levels: Map<string, number>): number {
   if (ref == null) return 0
   return levels.get(ref) ?? 0
+}
+
+// ── Wall opening segmentation ──────────────────────────────────
+
+interface WallOpening {
+  /** Distance from wall start to opening center (cm) */
+  centerAlong: number
+  /** Opening width along the wall (cm) */
+  width: number
+  /** Bottom of opening above floor (cm) */
+  bottom: number
+  /** Top of opening above floor (cm) */
+  top: number
+}
+
+function computeWallOpenings(
+  wall: Wall,
+  furniture: ReadonlyArray<Furniture>,
+): WallOpening[] {
+  const dx = wall.xEnd - wall.xStart
+  const dy = wall.yEnd - wall.yStart
+  const length = Math.hypot(dx, dy)
+  if (length === 0) return []
+  const openings: WallOpening[] = []
+  for (const f of furniture) {
+    if (!f.doorOrWindow || f.wallRef !== wall.id) continue
+    let centerAlong: number
+    if (f.wallOffset != null) {
+      centerAlong = f.wallOffset
+    } else {
+      const t = ((f.x - wall.xStart) * dx + (f.y - wall.yStart) * dy) / (length * length)
+      centerAlong = t * length
+    }
+    openings.push({
+      centerAlong,
+      width: f.width,
+      bottom: f.elevation,
+      top: f.elevation + f.height,
+    })
+  }
+  return openings
+}
+
+function buildWallPrimitives(
+  wall: Wall,
+  openings: WallOpening[],
+  wallHeight: number,
+  wallElevation: number,
+  angle: number,
+  length: number,
+  leftMatId: string,
+  rightMatId: string,
+): BoxPrimitive[] {
+  const dx = wall.xEnd - wall.xStart
+  const dy = wall.yEnd - wall.yStart
+  const ux = dx / length
+  const uy = dy / length
+  const thickness = wall.thickness
+
+  const segBox = (d1: number, d2: number, y1: number, y2: number, matId: string): BoxPrimitive => ({
+    type: 'box',
+    position: [wall.xStart + ux * (d1 + d2) / 2, wallElevation + (y1 + y2) / 2, wall.yStart + uy * (d1 + d2) / 2],
+    size: [d2 - d1, y2 - y1, thickness],
+    rotation: [0, -angle, 0],
+    materialId: matId,
+  })
+
+  if (openings.length === 0) {
+    const cx = (wall.xStart + wall.xEnd) / 2
+    const cy = (wall.yStart + wall.yEnd) / 2
+    return [
+      { type: 'box', position: [cx, wallElevation + wallHeight / 2, cy], size: [length, wallHeight, thickness], rotation: [0, -angle, 0], materialId: rightMatId },
+      { type: 'box', position: [cx, wallElevation + wallHeight / 2, cy], size: [length, wallHeight, thickness], rotation: [0, -angle, 0], materialId: leftMatId },
+    ]
+  }
+
+  const sorted = [...openings].sort((a, b) => (a.centerAlong - a.width / 2) - (b.centerAlong - b.width / 2))
+  const boxes: BoxPrimitive[] = []
+  let pos = 0
+  for (const op of sorted) {
+    const opStart = Math.max(0, op.centerAlong - op.width / 2)
+    const opEnd = Math.min(length, op.centerAlong + op.width / 2)
+    if (opStart > pos) {
+      boxes.push(segBox(pos, opStart, 0, wallHeight, rightMatId))
+      boxes.push(segBox(pos, opStart, 0, wallHeight, leftMatId))
+    }
+    if (op.bottom > 0) {
+      boxes.push(segBox(opStart, opEnd, 0, op.bottom, rightMatId))
+      boxes.push(segBox(opStart, opEnd, 0, op.bottom, leftMatId))
+    }
+    if (op.top < wallHeight) {
+      boxes.push(segBox(opStart, opEnd, op.top, wallHeight, rightMatId))
+      boxes.push(segBox(opStart, opEnd, op.top, wallHeight, leftMatId))
+    }
+    pos = Math.max(pos, opEnd)
+  }
+  if (pos < length) {
+    boxes.push(segBox(pos, length, 0, wallHeight, rightMatId))
+    boxes.push(segBox(pos, length, 0, wallHeight, leftMatId))
+  }
+  return boxes
 }
 
 // ── Build function ──────────────────────────────────────────────
@@ -137,29 +240,15 @@ export function buildRenderableScene(
     const height = wall.height ?? DEFAULT_WALL_HEIGHT_CM
     const angle = Math.atan2(dy, dx)
 
-    // Right face (positive side)
-    const rightBox: BoxPrimitive = {
-      type: 'box',
-      position: [(wall.xStart + wall.xEnd) / 2, elevation + height / 2, (wall.yStart + wall.yEnd) / 2],
-      size: [length, height, wall.thickness],
-      rotation: [0, -angle, 0],
-      materialId: rightMat.id,
-    }
+    const openings = computeWallOpenings(wall, home.furniture)
+    const primitives = buildWallPrimitives(
+      wall, openings, height, elevation, angle, length, leftMat.id, rightMat.id,
+    )
 
-    // Left face (negative side)
-    const leftBox: BoxPrimitive = {
-      type: 'box',
-      position: [(wall.xStart + wall.xEnd) / 2, elevation + height / 2, (wall.yStart + wall.yEnd) / 2],
-      size: [length, height, wall.thickness],
-      rotation: [0, -angle, 0],
-      materialId: leftMat.id,
-    }
-
-    // Store both as a wall object with two primitives
     const wallObj: SceneObject = {
       id: `wall:${wall.id}`,
       name: `Wall ${wall.id}`,
-      primitives: [rightBox, leftBox],
+      primitives,
       visible: { plan: true, threeD: true, luxcore: true },
     }
     objects.push(wallObj)
