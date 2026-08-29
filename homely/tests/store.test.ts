@@ -262,7 +262,7 @@ describe('HomeModel validation', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
     const wall = model.addWall(wallInput())
-    const furniture = model.addFurniture({
+    model.addFurniture({
       name: 'door',
       x: 0,
       y: 0,
@@ -319,7 +319,7 @@ describe('HomeModel validation', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
     const wall = model.addWall(wallInput())
-    const door = model.addFurniture({
+    model.addFurniture({
       name: 'door',
       x: 0,
       y: 0,
@@ -345,7 +345,7 @@ describe('HomeModel validation', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
     const wall = model.addWall(wallInput())
-    const door = model.addFurniture({
+    model.addFurniture({
       name: 'door',
       x: 0,
       y: 0,
