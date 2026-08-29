@@ -12,6 +12,7 @@ import type {
 } from './home'
 import { DEFAULT_WALL_HEIGHT_CM } from './home'
 import type { HomeStore } from './store'
+import { normalizeAngle } from './export'
 
 export const DEFAULT_LEVEL_HEIGHT_CM = DEFAULT_WALL_HEIGHT_CM
 
@@ -42,14 +43,22 @@ function requireFinite(value: unknown, field: string): void {
   assert(typeof value === 'number' && Number.isFinite(value), `${field} must be a finite number`)
 }
 
+function requireMinimum(value: unknown, field: string, min: number): void {
+  assert(
+    typeof value === 'number' && Number.isFinite(value) && value >= min,
+    `${field} must be a finite number >= ${min}`,
+  )
+}
+
 /** Re-validates patches so updates can never smuggle schema-invalid state in. */
 function validatePatch(key: CollectionKey, patch: Record<string, unknown>): void {
   switch (key) {
     case 'walls': {
-      for (const field of ['xStart', 'yStart', 'xEnd', 'yEnd', 'height', 'heightAtEnd', 'arcExtent']) {
+      for (const field of ['xStart', 'yStart', 'xEnd', 'yEnd', 'heightAtEnd', 'arcExtent']) {
         if (patch[field] !== undefined) requireFinite(patch[field], field)
       }
-      if (patch.thickness !== undefined) requirePositive(patch.thickness, 'thickness')
+      if (patch.height !== undefined) requireMinimum(patch.height, 'height', 1)
+      if (patch.thickness !== undefined) requireMinimum(patch.thickness, 'thickness', 0.1)
       break
     }
     case 'rooms': {
@@ -68,11 +77,15 @@ function validatePatch(key: CollectionKey, patch: Record<string, unknown>): void
       break
     }
     case 'furniture': {
-      for (const field of ['x', 'y', 'angleDeg', 'elevation', 'pitchDeg', 'rollDeg']) {
+      for (const field of ['x', 'y', 'elevation', 'pitchDeg', 'rollDeg']) {
         if (patch[field] !== undefined) requireFinite(patch[field], field)
       }
+      if (patch.angleDeg !== undefined) {
+        requireFinite(patch.angleDeg, 'angleDeg')
+        patch.angleDeg = normalizeAngle(patch.angleDeg as number)
+      }
       for (const field of ['width', 'depth', 'height']) {
-        if (patch[field] !== undefined) requirePositive(patch[field], field)
+        if (patch[field] !== undefined) requireMinimum(patch[field], field, 0.1)
       }
       if (patch.modelRotationDeg !== undefined) {
         assert(Array.isArray(patch.modelRotationDeg), 'modelRotationDeg must be an array')
@@ -169,7 +182,10 @@ export class HomeModel {
     requireFinite(input.yStart, 'yStart')
     requireFinite(input.xEnd, 'xEnd')
     requireFinite(input.yEnd, 'yEnd')
-    requirePositive(input.thickness, 'thickness')
+    requireMinimum(input.thickness, 'thickness', 0.1)
+    if (input.height !== undefined && input.height !== null) {
+      requireMinimum(input.height, 'height', 1)
+    }
     let created!: Wall
     this.store.apply((h) => {
       created = { ...input, id: this.store.generateId('wall') }
@@ -299,9 +315,10 @@ export class HomeModel {
     requireFinite(input.y, 'y')
     requireFinite(input.angleDeg, 'angleDeg')
     requireFinite(input.elevation, 'elevation')
-    requirePositive(input.width, 'width')
-    requirePositive(input.depth, 'depth')
-    requirePositive(input.height, 'height')
+    requireMinimum(input.width, 'width', 0.1)
+    requireMinimum(input.depth, 'depth', 0.1)
+    requireMinimum(input.height, 'height', 0.1)
+    const normalizedInput = { ...input, angleDeg: normalizeAngle(input.angleDeg) }
     let created!: Furniture
     this.store.apply((h) => {
       created = {
@@ -314,7 +331,7 @@ export class HomeModel {
         doorOrWindow: false,
         modelRotationDeg: [],
         levelRef: null,
-        ...input,
+        ...normalizedInput,
         id: this.store.generateId('furniture'),
       }
       h.furniture.push(created)
