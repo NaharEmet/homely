@@ -80,17 +80,21 @@ export function convertSh3dModel(item: CatalogItem): THREE.Group | null {
       metalness: 0.05,
     })
 
-    const pngPath = join(SH3D_RESOURCES, `${name}.png`)
-    try {
-      accessSync(pngPath)
-      const img = document.createElement('img') as HTMLImageElement
-      img.src = `file://${pngPath}`
-      if (img.complete) {
-        fallbackMaterial.map = new THREE.Texture(img)
-        fallbackMaterial.map.needsUpdate = true
+    const faceCount = (objText.match(/^f\s/gm) ?? []).length
+    const facesWithUv = (objText.match(/^f\s.*\d+\/\d+/gm) ?? []).length
+    if (faceCount > 0 && facesWithUv / faceCount > 0.5) {
+      const pngPath = join(SH3D_RESOURCES, `${name}.png`)
+      try {
+        accessSync(pngPath)
+        const img = document.createElement('img') as HTMLImageElement
+        img.src = `file://${pngPath}`
+        if (img.complete) {
+          fallbackMaterial.map = new THREE.Texture(img)
+          fallbackMaterial.map.needsUpdate = true
+        }
+      } catch {
+        // No matching PNG — keep flat color
       }
-    } catch {
-      // No matching PNG — keep flat color
     }
 
     group.traverse((child) => {
