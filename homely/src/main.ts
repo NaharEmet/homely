@@ -902,7 +902,8 @@ const catalogReady = loadDefaultCatalog().then(async ({ catalog }) => {
   catalogHost.appendChild(catalogPanel.element)
 }).catch((err) => {
   console.error('[catalog] failed to load catalog:', err)
-  statusAutomation.textContent = 'automation: catalog unavailable'
+  automationText = 'catalog unavailable'
+  refreshStatus()
 })
 
 // ── User model import (runtime) ─────────────────────────────────────────────
@@ -982,7 +983,11 @@ async function connectAutomation(): Promise<void> {
     port = raw === null ? null : Number(raw)
   }
   if (port !== null) {
-    await catalogReady // ensure the shared catalog reaches the handler
+    try {
+      await catalogReady // ensure the shared catalog reaches the handler
+    } catch {
+      // catalog load failed; proceed without catalog support
+    }
     new AutomationClient(new HomelyCommandHandler(store, { planEngine: engine, catalog: sharedCatalog }), {
       port,
       mode: 'gui',
@@ -997,3 +1002,5 @@ async function connectAutomation(): Promise<void> {
   }
 }
 void connectAutomation()
+
+export { catalogReady }

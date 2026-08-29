@@ -33,6 +33,7 @@
     "@types/ws": "^8",
     "ajv": "^8.20.0",
     "eslint": "^9",
+    "jsdom": "^30.0.1",
     "prettier": "^3",
     "tsx": "^4",
     "typescript": "^5",
