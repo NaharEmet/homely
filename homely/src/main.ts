@@ -169,10 +169,35 @@ function refreshMenus(): void {
     {
       label: 'File',
       items: [
-        { label: 'New', action: () => { store.resetToEmpty(); refreshAll() } },
+        {
+          label: 'New',
+          action: () => {
+            if (store.isDirty() && !confirm('Unsaved changes will be lost. Continue?')) return
+            store.resetToEmpty()
+            doFit()
+            refreshAll()
+          },
+        },
         { label: '---' },
-        { label: 'Save', action: async () => { await saveHomeFile(store.getHome()) } },
-        { label: 'Open', action: async () => { const home = await loadHomeFile(); if (home) { store.loadHome(home); doFit(); refreshAll() } } },
+        {
+          label: 'Save',
+          action: async () => {
+            await saveHomeFile(store.getHome())
+            store.markClean()
+          },
+        },
+        {
+          label: 'Open',
+          action: async () => {
+            if (store.isDirty() && !confirm('Unsaved changes will be lost. Continue?')) return
+            const home = await loadHomeFile()
+            if (home) {
+              store.loadHome(home)
+              doFit()
+              refreshAll()
+            }
+          },
+        },
         { label: '---' },
         { label: 'Export Plan as PNG…', action: () => { exportPlanPng(store.getHome()) } },
       ],
@@ -790,6 +815,13 @@ refreshLevelButtons()
 refreshStatus()
 window.addEventListener('resize', resizeCanvas)
 requestAnimationFrame(frame)
+
+// Warn before closing with unsaved changes.
+window.addEventListener('beforeunload', (e) => {
+  if (store.isDirty()) {
+    e.preventDefault()
+  }
+})
 
 // 3D view — creates its own renderer inside #view3d
 view3d = new View3D(store, {

@@ -22,6 +22,7 @@ export class HomeStore {
   private idCounter = 1
   private compoundDepth = 0
   private compoundBase: NormalizedHomeState | null = null
+  private _dirty = false
 
   /**
    * timeZoneId feeds the compass location default (SH3D reads the OS zone);
@@ -53,6 +54,7 @@ export class HomeStore {
       // event-by-event) but the single undo push waits for endCompoundEdit.
       this.home = draft
       followTopCamera(this.home, previous)
+      this._dirty = true
       return
     }
     this.undoStack.push(previous)
@@ -60,6 +62,7 @@ export class HomeStore {
     this.redoStack = []
     this.home = draft
     followTopCamera(this.home, previous)
+    this._dirty = true
   }
 
   /**
@@ -119,6 +122,16 @@ export class HomeStore {
     return this.redoStack.length > 0
   }
 
+  /** True after any undoable mutation since the last save/load/new. */
+  isDirty(): boolean {
+    return this._dirty
+  }
+
+  /** Clear dirty flag — call after successful save or load. */
+  markClean(): void {
+    this._dirty = false
+  }
+
   /**
    * Mutates view-ish state (e.g. activeTool) WITHOUT recording an undo step —
    * tool switches are not document edits (SH3D mode changes are not undoable).
@@ -146,6 +159,7 @@ export class HomeStore {
     // the rest of the document — never sealed onto the fresh undo stack.
     this.compoundDepth = 0
     this.compoundBase = null
+    this._dirty = false
   }
 
   /**
@@ -160,6 +174,7 @@ export class HomeStore {
     this.compoundDepth = 0
     this.compoundBase = null
     this.idCounter = this.maxExistingId(this.home) + 1
+    this._dirty = false
   }
 
   private maxExistingId(home: NormalizedHomeState): number {
