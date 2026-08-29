@@ -140,15 +140,22 @@ export class HomeModel {
   removeLevel(id: string): boolean {
     const snapshot = this.store.getHome()
     assert(snapshot.levels.some((level) => level.id === id), `unknown level: ${id}`)
+    const cascadeIds = new Set<string>()
+    for (const key of ['walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
+      for (const item of snapshot[key] as Array<IdLike & { levelRef?: string | null }>) {
+        if (item.levelRef === id) cascadeIds.add(item.id)
+      }
+    }
+    const allRemovable = new Set([id, ...cascadeIds])
     this.store.apply((h) => {
-      const index = h.levels.findIndex((l) => l.id === id)
-      if (index >= 0) h.levels.splice(index, 1)
-      // Dangling levelRefs revert to the default (null) level.
-      for (const wall of h.walls) if (wall.levelRef === id) wall.levelRef = null
-      for (const room of h.rooms) if (room.levelRef === id) room.levelRef = null
-      for (const f of h.furniture) if (f.levelRef === id) f.levelRef = null
-      for (const d of h.dimensionLines) if (d.levelRef === id) d.levelRef = null
-      for (const l of h.labels) if (l.levelRef === id) l.levelRef = null
+      h.levels = h.levels.filter((l) => l.id !== id)
+      for (const key of ['walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
+        const list = h[key] as unknown as IdLike[]
+        ;(h as unknown as Record<typeof key, IdLike[]>)[key] = list.filter(
+          (item) => !allRemovable.has(item.id),
+        )
+      }
+      h.selection = h.selection.filter((sid) => !allRemovable.has(sid))
     })
     return true
   }
@@ -486,13 +493,22 @@ export class HomeModel {
       assert(found.has(id), `unknown id: ${id}`)
     }
     const wallIds = new Set<string>()
+    const levelIds = new Set<string>()
     for (const id of ids) {
       if (snapshot.walls.some((w) => w.id === id)) wallIds.add(id)
+      if (snapshot.levels.some((l) => l.id === id)) levelIds.add(id)
     }
     const cascadeIds = new Set<string>()
     if (wallIds.size > 0) {
       for (const f of snapshot.furniture) {
         if (f.wallRef && wallIds.has(f.wallRef)) cascadeIds.add(f.id)
+      }
+    }
+    if (levelIds.size > 0) {
+      for (const key of ['walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
+        for (const item of snapshot[key] as Array<IdLike & { levelRef?: string | null }>) {
+          if (item.levelRef && levelIds.has(item.levelRef)) cascadeIds.add(item.id)
+        }
       }
     }
     const allRemovable = new Set([...wanted, ...cascadeIds])

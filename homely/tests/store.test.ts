@@ -363,7 +363,7 @@ describe('HomeModel validation', () => {
     expect(home.furniture).toHaveLength(0)
   })
 
-  it('removeLevel nulls dangling levelRefs', () => {
+  it('removeLevel cascade-deletes all content scoped to the level', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
     const level = model.addLevel({
@@ -375,10 +375,125 @@ describe('HomeModel validation', () => {
       viewable: true,
     })
     model.addWall({ ...wallInput(), levelRef: level.id })
+    model.addRoom([[0, 0], [100, 0], [100, 100]], { levelRef: level.id })
+    model.addFurniture({
+      name: 'sofa',
+      x: 10,
+      y: 10,
+      angleDeg: 0,
+      width: 200,
+      depth: 80,
+      height: 80,
+      elevation: 0,
+      levelRef: level.id,
+    })
+    model.addDimensionLine({ xStart: 0, yStart: 0, xEnd: 100, yEnd: 0, offset: 50, levelRef: level.id })
+    model.addLabel({ text: 'L0', x: 0, y: 0, levelRef: level.id })
     model.removeLevel(level.id)
     const home = store.getHome()
     expect(home.levels).toHaveLength(0)
-    expect(home.walls[0]?.levelRef ?? null).toBeNull()
+    expect(home.walls).toHaveLength(0)
+    expect(home.rooms).toHaveLength(0)
+    expect(home.furniture).toHaveLength(0)
+    expect(home.dimensionLines).toHaveLength(0)
+    expect(home.labels).toHaveLength(0)
+  })
+
+  it('removeLevel leaves content on the default level and other levels intact', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const level = model.addLevel({
+      name: 'L0',
+      elevation: 0,
+      floorThickness: 10,
+      height: 250,
+      visible: true,
+      viewable: true,
+    })
+    const other = model.addLevel({
+      name: 'L1',
+      elevation: 250,
+      floorThickness: 10,
+      height: 250,
+      visible: true,
+      viewable: true,
+    })
+    const defaultWall = model.addWall({ ...wallInput(), xEnd: 400 })
+    const otherWall = model.addWall({ ...wallInput(), xStart: 500, xEnd: 900, levelRef: other.id })
+    const levelWall = model.addWall({ ...wallInput(), xStart: 1000, xEnd: 1400, levelRef: level.id })
+    model.removeLevel(level.id)
+    const home = store.getHome()
+    expect(home.levels).toHaveLength(1)
+    expect(home.levels[0]!.id).toBe(other.id)
+    expect(home.walls.map((w) => w.id).sort()).toEqual([defaultWall.id, otherWall.id].sort())
+    expect(home.walls.some((w) => w.id === levelWall.id)).toBe(false)
+    expect(home.walls.some((w) => w.levelRef === level.id)).toBe(false)
+  })
+
+  it('undo restores the level and all cascade-deleted content in one step', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const level = model.addLevel({
+      name: 'L0',
+      elevation: 0,
+      floorThickness: 10,
+      height: 250,
+      visible: true,
+      viewable: true,
+    })
+    model.addWall({ ...wallInput(), levelRef: level.id })
+    model.addFurniture({
+      name: 'door',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+      levelRef: level.id,
+    })
+    const before = store.getHome()
+    model.removeLevel(level.id)
+    expect(store.getHome().levels).toHaveLength(0)
+    expect(store.getHome().walls).toHaveLength(0)
+    expect(store.getHome().furniture).toHaveLength(0)
+    expect(store.undo()).toBe(true)
+    const restored = store.getHome()
+    expect(restored.levels).toEqual(before.levels)
+    expect(restored.walls).toEqual(before.walls)
+    expect(restored.furniture).toEqual(before.furniture)
+    expect(restored.selection).toEqual(before.selection)
+  })
+
+  it('removeItems cascades content when a level id is in the delete set', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const level = model.addLevel({
+      name: 'L0',
+      elevation: 0,
+      floorThickness: 10,
+      height: 250,
+      visible: true,
+      viewable: true,
+    })
+    model.addWall({ ...wallInput(), levelRef: level.id })
+    model.addFurniture({
+      name: 'sofa',
+      x: 10,
+      y: 10,
+      angleDeg: 0,
+      width: 200,
+      depth: 80,
+      height: 80,
+      elevation: 0,
+      levelRef: level.id,
+    })
+    model.removeItems([level.id])
+    const home = store.getHome()
+    expect(home.levels).toHaveLength(0)
+    expect(home.walls).toHaveLength(0)
+    expect(home.furniture).toHaveLength(0)
   })
 
   it('environment wallsAlpha clamps to [0,1] domain via validation error', () => {
