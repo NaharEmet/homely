@@ -1,10 +1,21 @@
 import type { HomeStore } from '../core/store'
 import { HomeModel } from '../core/model'
 import type { Wall, Room, Furniture, NormalizedHomeState } from '../core/home'
+import { normalizeAngle } from '../core/export'
 import { observeStore } from '../view3d/watch'
 
 function num(v: number | null | undefined, fallback = 0): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback
+}
+
+export function validatePositive(raw: string, fallback: number, min = 0.1): number {
+  const n = parseFloat(raw)
+  return Number.isFinite(n) && n >= min ? n : fallback
+}
+
+export function validateFinite(raw: string, fallback: number): number {
+  const n = parseFloat(raw)
+  return Number.isFinite(n) ? n : fallback
 }
 
 function hexColor(v: number | null | undefined): string {
@@ -181,9 +192,17 @@ export class PropertiesPanel {
     // Start point
     const startGroup = this.group('Start')
     const sxInput = numInput(num(wall.xStart), { step: 0.01 })
-    sxInput.addEventListener('change', () => commit({ xStart: parseFloat(sxInput.value) || 0 }))
+    sxInput.addEventListener('change', () => {
+      const n = validateFinite(sxInput.value, wall.xStart)
+      sxInput.value = String(n)
+      commit({ xStart: n })
+    })
     const syInput = numInput(num(wall.yStart), { step: 0.01 })
-    syInput.addEventListener('change', () => commit({ yStart: parseFloat(syInput.value) || 0 }))
+    syInput.addEventListener('change', () => {
+      const n = validateFinite(syInput.value, wall.yStart)
+      syInput.value = String(n)
+      commit({ yStart: n })
+    })
     startGroup.appendChild(fieldRow('x', sxInput))
     startGroup.appendChild(fieldRow('y', syInput))
     body.appendChild(startGroup)
@@ -191,9 +210,17 @@ export class PropertiesPanel {
     // End point
     const endGroup = this.group('End')
     const exInput = numInput(num(wall.xEnd), { step: 0.01 })
-    exInput.addEventListener('change', () => commit({ xEnd: parseFloat(exInput.value) || 0 }))
+    exInput.addEventListener('change', () => {
+      const n = validateFinite(exInput.value, wall.xEnd)
+      exInput.value = String(n)
+      commit({ xEnd: n })
+    })
     const eyInput = numInput(num(wall.yEnd), { step: 0.01 })
-    eyInput.addEventListener('change', () => commit({ yEnd: parseFloat(eyInput.value) || 0 }))
+    eyInput.addEventListener('change', () => {
+      const n = validateFinite(eyInput.value, wall.yEnd)
+      eyInput.value = String(n)
+      commit({ yEnd: n })
+    })
     endGroup.appendChild(fieldRow('x', exInput))
     endGroup.appendChild(fieldRow('y', eyInput))
     body.appendChild(endGroup)
@@ -204,12 +231,20 @@ export class PropertiesPanel {
 
     // Height
     const heightInput = numInput(num(wall.height, 250), { min: 1, step: 1 })
-    heightInput.addEventListener('change', () => commit({ height: parseFloat(heightInput.value) || 250 }))
+    heightInput.addEventListener('change', () => {
+      const n = validatePositive(heightInput.value, num(wall.height, 250), 1)
+      heightInput.value = String(n)
+      commit({ height: n })
+    })
     body.appendChild(fieldRow('Height', heightInput))
 
     // Thickness
     const thickInput = numInput(num(wall.thickness, 7), { min: 0.1, step: 0.1 })
-    thickInput.addEventListener('change', () => commit({ thickness: parseFloat(thickInput.value) || 7 }))
+    thickInput.addEventListener('change', () => {
+      const n = validatePositive(thickInput.value, num(wall.thickness, 7), 0.1)
+      thickInput.value = String(n)
+      commit({ thickness: n })
+    })
     body.appendChild(fieldRow('Thickness', thickInput))
 
     // Angle (read-only)
@@ -275,9 +310,17 @@ export class PropertiesPanel {
     // Position
     const posGroup = this.group('Position')
     const pxInput = numInput(num(f.x), { step: 0.01 })
-    pxInput.addEventListener('change', () => commit({ x: parseFloat(pxInput.value) || 0 }))
+    pxInput.addEventListener('change', () => {
+      const n = validateFinite(pxInput.value, f.x)
+      pxInput.value = String(n)
+      commit({ x: n })
+    })
     const pyInput = numInput(num(f.y), { step: 0.01 })
-    pyInput.addEventListener('change', () => commit({ y: parseFloat(pyInput.value) || 0 }))
+    pyInput.addEventListener('change', () => {
+      const n = validateFinite(pyInput.value, f.y)
+      pyInput.value = String(n)
+      commit({ y: n })
+    })
     posGroup.appendChild(fieldRow('x', pxInput))
     posGroup.appendChild(fieldRow('y', pyInput))
     body.appendChild(posGroup)
@@ -285,11 +328,23 @@ export class PropertiesPanel {
     // Size
     const sizeGroup = this.group('Size')
     const wInput = numInput(num(f.width), { min: 0.1, step: 0.1 })
-    wInput.addEventListener('change', () => commit({ width: parseFloat(wInput.value) || 1 }))
+    wInput.addEventListener('change', () => {
+      const n = validatePositive(wInput.value, num(f.width, 1))
+      wInput.value = String(n)
+      commit({ width: n })
+    })
     const dInput = numInput(num(f.depth), { min: 0.1, step: 0.1 })
-    dInput.addEventListener('change', () => commit({ depth: parseFloat(dInput.value) || 1 }))
+    dInput.addEventListener('change', () => {
+      const n = validatePositive(dInput.value, num(f.depth, 1))
+      dInput.value = String(n)
+      commit({ depth: n })
+    })
     const hInput = numInput(num(f.height), { min: 0.1, step: 0.1 })
-    hInput.addEventListener('change', () => commit({ height: parseFloat(hInput.value) || 1 }))
+    hInput.addEventListener('change', () => {
+      const n = validatePositive(hInput.value, num(f.height, 1))
+      hInput.value = String(n)
+      commit({ height: n })
+    })
     sizeGroup.appendChild(fieldRow('W', wInput))
     sizeGroup.appendChild(fieldRow('D', dInput))
     sizeGroup.appendChild(fieldRow('H', hInput))
@@ -297,7 +352,12 @@ export class PropertiesPanel {
 
     // Angle
     const angleInput = numInput(num(f.angleDeg), { step: 0.01 })
-    angleInput.addEventListener('change', () => commit({ angleDeg: parseFloat(angleInput.value) || 0 }))
+    angleInput.addEventListener('change', () => {
+      const n = validateFinite(angleInput.value, f.angleDeg)
+      const normalized = normalizeAngle(n)
+      angleInput.value = String(normalized)
+      commit({ angleDeg: normalized })
+    })
     body.appendChild(fieldRow('Angle', angleInput))
 
     // Color
@@ -307,7 +367,11 @@ export class PropertiesPanel {
 
     // Elevation
     const elevInput = numInput(num(f.elevation), { step: 0.01 })
-    elevInput.addEventListener('change', () => commit({ elevation: parseFloat(elevInput.value) || 0 }))
+    elevInput.addEventListener('change', () => {
+      const n = validateFinite(elevInput.value, f.elevation)
+      elevInput.value = String(n)
+      commit({ elevation: n })
+    })
     body.appendChild(fieldRow('Elevation', elevInput))
 
     // Visibility
