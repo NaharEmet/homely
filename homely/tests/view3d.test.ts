@@ -285,6 +285,164 @@ describe('buildScene', () => {
   })
 })
 
+describe('wall opening segmentation (M33)', () => {
+  /** Count THREE.Mesh objects in the scene whose name matches (segment meshes). */
+  function countMeshesByName(scene: THREE.Scene, name: string): number {
+    let count = 0
+    scene.traverse((o) => {
+      if (o.name === name && (o as THREE.Mesh).isMesh) count += 1
+    })
+    return count
+  }
+
+  /** Collect all THREE.Mesh objects in the scene whose name matches. */
+  function meshesByName(scene: THREE.Scene, name: string): THREE.Mesh[] {
+    const meshes: THREE.Mesh[] = []
+    scene.traverse((o) => {
+      if (o.name === name && (o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh)
+    })
+    return meshes
+  }
+
+  it('renders a wall with no openings as a single solid box (no regression)', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+    })
+    const scene = buildScene(store.getHome())
+    // Exactly one mesh named wall:w1 — not segmented into a group.
+    expect(countMeshesByName(scene, 'wall:w1')).toBe(1)
+    const wall = meshChild(scene, 'wall:w1')
+    expect(wall.geometry).toBeInstanceOf(THREE.BoxGeometry)
+    const box = wall.geometry as THREE.BoxGeometry
+    expect(box.parameters.width).toBeCloseTo(400)
+    expect(box.parameters.height).toBe(250)
+    expect(box.parameters.depth).toBe(15)
+  })
+
+  it('segments a wall into multiple boxes when a door opening is present', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+      draft.furniture.push({
+        id: 'd1', name: 'Door',
+        x: 200, y: 0, angleDeg: 0,
+        width: 90, depth: 15, height: 210,
+        elevation: 0,
+        doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+      })
+    })
+    const scene = buildScene(store.getHome())
+    // Door (elevation=0, top=210, wall height=250): left span + lintel + right span = 3
+    const meshes = meshesByName(scene, 'wall:w1')
+    expect(meshes.length).toBe(3)
+    for (const m of meshes) {
+      expect(m.geometry).toBeInstanceOf(THREE.BoxGeometry)
+    }
+  })
+
+  it('produces sill and lintel boxes for window openings', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+      draft.furniture.push({
+        id: 'win1', name: 'Window',
+        x: 200, y: 0, angleDeg: 0,
+        width: 120, depth: 15, height: 120,
+        elevation: 90,
+        doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+      })
+    })
+    const scene = buildScene(store.getHome())
+    // Window (elevation=90, top=210, wall height=250):
+    // left span + sill + lintel + right span = 4
+    const meshes = meshesByName(scene, 'wall:w1')
+    expect(meshes.length).toBe(4)
+  })
+
+  it('produces more child meshes for a wall with an opening than without', () => {
+    const storeWith = new HomeStore()
+    storeWith.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+      draft.furniture.push({
+        id: 'd1', name: 'Door',
+        x: 200, y: 0, angleDeg: 0,
+        width: 90, depth: 15, height: 210,
+        elevation: 0,
+        doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+      })
+    })
+    const storeWithout = new HomeStore()
+    storeWithout.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+    })
+    const withCount = countMeshesByName(buildScene(storeWith.getHome()), 'wall:w1')
+    const withoutCount = countMeshesByName(buildScene(storeWithout.getHome()), 'wall:w1')
+    expect(withCount).toBeGreaterThan(withoutCount)
+  })
+
+  it('places the lintel segment above the door opening height', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+      draft.furniture.push({
+        id: 'd1', name: 'Door',
+        x: 200, y: 0, angleDeg: 0,
+        width: 90, depth: 15, height: 210,
+        elevation: 0,
+        doorOrWindow: true, wallRef: 'w1', wallOffset: 200,
+      })
+    })
+    const scene = buildScene(store.getHome())
+    const meshes = meshesByName(scene, 'wall:w1')
+    // The lintel is the shortest segment (height = 250 - 210 = 40).
+    const lintel = meshes.reduce((a, b) =>
+      (a.geometry as THREE.BoxGeometry).parameters.height <
+      (b.geometry as THREE.BoxGeometry).parameters.height ? a : b,
+    )
+    const lintelBox = lintel.geometry as THREE.BoxGeometry
+    expect(lintelBox.parameters.height).toBeCloseTo(40)
+    // Lintel center y = elevation + (210 + 250)/2 = 230
+    expect(lintel.position.y).toBeCloseTo(230)
+  })
+
+  it('ignores door/window furniture attached to a different wall', () => {
+    const store = new HomeStore()
+    store.apply((draft) => {
+      draft.walls.push({
+        id: 'w1', xStart: 0, yStart: 0, xEnd: 400, yEnd: 0, thickness: 15,
+      })
+      draft.walls.push({
+        id: 'w2', xStart: 0, yStart: 0, xEnd: 0, yEnd: 400, thickness: 15,
+      })
+      draft.furniture.push({
+        id: 'd1', name: 'Door',
+        x: 200, y: 0, angleDeg: 0,
+        width: 90, depth: 15, height: 210,
+        elevation: 0,
+        doorOrWindow: true, wallRef: 'w2', wallOffset: 200,
+      })
+    })
+    const scene = buildScene(store.getHome())
+    // w1 has no openings (door is on w2) → single solid box.
+    expect(countMeshesByName(scene, 'wall:w1')).toBe(1)
+    // w2 is segmented.
+    expect(countMeshesByName(scene, 'wall:w2')).toBe(3)
+  })
+})
+
 describe('camera conventions', () => {
   it('maps the observer default through the SH3D transform', () => {
     const view = new View3D(new HomeStore())

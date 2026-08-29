@@ -25,12 +25,53 @@ function elevationFor(ref: string | null | undefined, levels: Map<string, number
   return levels.get(ref) ?? 0
 }
 
-function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THREE.Mesh {
+// ── Wall opening segmentation (M33, ported from render/scene-builder.ts) ──
+
+interface WallOpening {
+  centerAlong: number
+  width: number
+  bottom: number
+  top: number
+}
+
+function computeWallOpenings(
+  wall: Wall,
+  furniture: ReadonlyArray<Furniture>,
+): WallOpening[] {
+  const dx = wall.xEnd - wall.xStart
+  const dy = wall.yEnd - wall.yStart
+  const length = Math.hypot(dx, dy)
+  if (length === 0) return []
+  const openings: WallOpening[] = []
+  for (const f of furniture) {
+    if (!f.doorOrWindow || f.wallRef !== wall.id) continue
+    let centerAlong: number
+    if (f.wallOffset != null) {
+      centerAlong = f.wallOffset
+    } else {
+      const t = ((f.x - wall.xStart) * dx + (f.y - wall.yStart) * dy) / (length * length)
+      centerAlong = t * length
+    }
+    openings.push({
+      centerAlong,
+      width: f.width,
+      bottom: f.elevation,
+      top: f.elevation + f.height,
+    })
+  }
+  return openings
+}
+
+function wallMesh(
+  wall: Wall,
+  elevation: number,
+  wallsTransparency: number,
+  furniture: ReadonlyArray<Furniture>,
+): THREE.Object3D {
   const dx = wall.xEnd - wall.xStart
   const dy = wall.yEnd - wall.yStart
   const length = Math.hypot(dx, dy)
   const height = wall.height ?? DEFAULT_WALL_HEIGHT_CM
-  const geometry = new THREE.BoxGeometry(length, height, wall.thickness)
   const material = new THREE.MeshStandardMaterial({
     color: wall.leftSideColor ?? DEFAULT_WALL_COLOR,
     roughness: 0.7,
@@ -41,17 +82,61 @@ function wallMesh(wall: Wall, elevation: number, wallsTransparency: number): THR
     material.transparent = true
     material.opacity = 1 - wallsTransparency
   }
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.name = `wall:${wall.id}`
-  mesh.position.set(
-    (wall.xStart + wall.xEnd) / 2,
-    elevation + height / 2,
-    (wall.yStart + wall.yEnd) / 2,
+  const yaw = Math.atan2(dy, dx)
+
+  const openings = computeWallOpenings(wall, furniture)
+
+  // No openings → single solid box (identical to pre-M33 behavior).
+  if (openings.length === 0) {
+    const geometry = new THREE.BoxGeometry(length, height, wall.thickness)
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.name = `wall:${wall.id}`
+    mesh.position.set(
+      (wall.xStart + wall.xEnd) / 2,
+      elevation + height / 2,
+      (wall.yStart + wall.yEnd) / 2,
+    )
+    mesh.rotation.y = yaw
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    return mesh
+  }
+
+  // Openings → side-span + sill + lintel boxes (M27 technique).
+  const ux = dx / length
+  const uy = dy / length
+  const thickness = wall.thickness
+  const group = new THREE.Group()
+
+  const segMesh = (d1: number, d2: number, y1: number, y2: number): THREE.Mesh => {
+    const geom = new THREE.BoxGeometry(d2 - d1, y2 - y1, thickness)
+    const m = new THREE.Mesh(geom, material)
+    m.name = `wall:${wall.id}`
+    m.position.set(
+      wall.xStart + ux * (d1 + d2) / 2,
+      elevation + (y1 + y2) / 2,
+      wall.yStart + uy * (d1 + d2) / 2,
+    )
+    m.rotation.y = yaw
+    m.castShadow = true
+    m.receiveShadow = true
+    return m
+  }
+
+  const sorted = [...openings].sort(
+    (a, b) => (a.centerAlong - a.width / 2) - (b.centerAlong - b.width / 2),
   )
-  mesh.rotation.y = Math.atan2(dy, dx)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  return mesh
+  let pos = 0
+  for (const op of sorted) {
+    const opStart = Math.max(0, op.centerAlong - op.width / 2)
+    const opEnd = Math.min(length, op.centerAlong + op.width / 2)
+    if (opStart > pos) group.add(segMesh(pos, opStart, 0, height))
+    if (op.bottom > 0) group.add(segMesh(opStart, opEnd, 0, op.bottom))
+    if (op.top < height) group.add(segMesh(opStart, opEnd, op.top, height))
+    pos = Math.max(pos, opEnd)
+  }
+  if (pos < length) group.add(segMesh(pos, length, 0, height))
+  return group
 }
 
 function wallEdges(wall: Wall, elevation: number): THREE.LineSegments {
@@ -294,7 +379,7 @@ function buildSceneInner(home: NormalizedHomeState, onModelReady?: () => void): 
   const root = new THREE.Group()
   root.name = 'home'
   for (const wall of home.walls) {
-    const mesh = wallMesh(wall, elevationFor(wall.levelRef, elevations), wallsTransparency)
+    const mesh = wallMesh(wall, elevationFor(wall.levelRef, elevations), wallsTransparency, home.furniture)
     root.add(mesh)
     root.add(wallEdges(wall, elevationFor(wall.levelRef, elevations)))
   }
