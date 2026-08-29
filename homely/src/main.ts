@@ -81,6 +81,7 @@ let spaceHeld = false
 let isPanning = false
 let panLastX = 0
 let panLastY = 0
+let activeLevelId: string | null = null
 
 const ZOOM_MIN = 0.1
 const ZOOM_MAX = 10.0
@@ -210,6 +211,10 @@ function buildToolbar(): void {
       <button class="tool-btn" id="btn-redo" title="Redo (Ctrl+Y)">Redo</button>
     </div>
     <div class="tool-separator"></div>
+    <div class="tool-group" id="level-group">
+      <button class="tool-btn" id="btn-level-all" title="Show all levels" data-level="all">All</button>
+    </div>
+    <div class="tool-separator"></div>
     <label><input id="magnetism" type="checkbox" checked /> Mag</label>
     <div class="toolbar-spacer"></div>
     <button class="tool-btn" id="btn-fit" title="Zoom to fit (double-click middle)">Fit</button>
@@ -288,6 +293,58 @@ function refreshCamera3DButtons(): void {
   for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-camera3d]')) {
     btn.classList.toggle('active', btn.dataset.camera3d === active)
   }
+}
+
+function refreshLevelButtons(): void {
+  const home = store.getHome()
+  const group = toolbar.querySelector<HTMLDivElement>('#level-group')!
+  let html = `<button class="tool-btn" id="btn-level-all" title="Show all levels" data-level="all">All</button>`
+  for (const level of home.levels) {
+    const isActive = activeLevelId === level.id
+    html += `<button class="tool-btn level-btn${isActive ? ' active' : ''}" data-level="${level.id}" title="${level.name}">${level.name}</button>`
+  }
+  html += `<button class="tool-btn" id="btn-add-level" title="Add level">+</button>`
+  group.innerHTML = html
+
+  group.querySelector('#btn-level-all')!.addEventListener('click', () => {
+    activeLevelId = null
+    engine.setActiveLevel(null)
+    refreshAll()
+  })
+
+  for (const btn of group.querySelectorAll<HTMLButtonElement>('button.level-btn')) {
+    btn.addEventListener('click', () => {
+      activeLevelId = btn.dataset.level!
+      engine.setActiveLevel(activeLevelId)
+      refreshAll()
+    })
+    btn.addEventListener('dblclick', () => {
+      const level = home.levels.find((l) => l.id === btn.dataset.level)
+      if (!level) return
+      const newName = window.prompt('Rename level:', level.name)
+      if (newName && newName.trim()) {
+        model.updateLevel(level.id, { name: newName.trim() })
+        refreshAll()
+      }
+    })
+  }
+
+  group.querySelector('#btn-add-level')!.addEventListener('click', () => {
+    const name = window.prompt('Level name:', `Level ${home.levels.length + 1}`)
+    if (!name || !name.trim()) return
+    const elevation = home.levels.length * 250
+    const created = model.addLevel({
+      name: name.trim(),
+      elevation,
+      floorThickness: 20,
+      height: 250,
+      visible: true,
+      viewable: true,
+    })
+    activeLevelId = created.id
+    engine.setActiveLevel(created.id)
+    refreshAll()
+  })
 }
 
 // ── Status bar ──────────────────────────────────────────────────────────────
@@ -647,7 +704,7 @@ function render(): void {
   const home = store.getHome()
   const preview: PlanPreview | null = engine.getPreview()
   const rc = ctx as unknown as PlanRenderingContext
-  drawPlan(home, preview, rc, currentView, canvas.width, canvas.height)
+  drawPlan(home, preview, rc, currentView, canvas.width, canvas.height, activeLevelId)
 }
 
 let userHasZoomed = false
@@ -659,19 +716,23 @@ function frame(): void {
 
 function doFit(): void {
   userHasZoomed = false
-  currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+  currentView = fitToBounds(store.getHome(), canvas.width, canvas.height, 40, activeLevelId)
   refreshStatus()
 }
 
 function selectAll(): void {
   const home = store.getHome()
+  const matchLevel = (levelRef: string | null | undefined): boolean => {
+    if (activeLevelId === null) return true
+    return (levelRef ?? null) === activeLevelId
+  }
   const ids = [
     ...home.levels,
-    ...home.walls,
-    ...home.rooms,
-    ...home.furniture,
-    ...home.dimensionLines,
-    ...home.labels,
+    ...home.walls.filter((w) => matchLevel(w.levelRef)),
+    ...home.rooms.filter((r) => matchLevel(r.levelRef)),
+    ...home.furniture.filter((f) => matchLevel(f.levelRef)),
+    ...home.dimensionLines.filter((d) => matchLevel(d.levelRef)),
+    ...home.labels.filter((l) => matchLevel(l.levelRef)),
   ].map((i) => i.id)
   model.setSelection(ids)
   refreshAll()
@@ -683,13 +744,14 @@ function resizeCanvas(): void {
   canvas.width = Math.max(320, Math.floor(w))
   canvas.height = Math.max(200, Math.floor(h))
   if (!userHasZoomed) {
-    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height)
+    currentView = fitToBounds(store.getHome(), canvas.width, canvas.height, 40, activeLevelId)
   }
 }
 
 function refreshAll(): void {
   refreshMenus()
   refreshToolbar()
+  refreshLevelButtons()
   refreshStatus()
 }
 
@@ -699,6 +761,7 @@ refreshMenus()
 buildToolbar()
 resizeCanvas()
 refreshToolbar()
+refreshLevelButtons()
 refreshStatus()
 window.addEventListener('resize', resizeCanvas)
 requestAnimationFrame(frame)
@@ -763,6 +826,7 @@ const catalogReady = loadDefaultCatalog().then(async ({ catalog }) => {
         color: item.color ?? null,
         doorOrWindow: item.doorOrWindow ?? false,
         modelPath: item.modelPath ?? null,
+        levelRef: activeLevelId,
       })
       model.setSelection([placed.id])
       refreshToolbar()

@@ -86,9 +86,18 @@ export class PlanEngine {
   /** Start point of a dimension-line-tool drawing session. */
   private dimensionStart: Point | null = null
   private vertexDrag: { wallId: string; endpoint: 'start' | 'end'; startX: number; startY: number; connectedWalls: Array<{ wallId: string; endpoint: 'start' | 'end' }> } | null = null
+  private activeLevelId: string | null = null
 
   constructor(model: HomeModel) {
     this.model = model
+  }
+
+  setActiveLevel(id: string | null): void {
+    this.activeLevelId = id
+  }
+
+  getActiveLevel(): string | null {
+    return this.activeLevelId
   }
 
   private homeSnapshot(): NormalizedHomeState {
@@ -369,6 +378,7 @@ export class PlanEngine {
       thickness: NEW_WALL_THICKNESS_CM,
       height: DEFAULT_WALL_HEIGHT_CM,
       patternId: NEW_WALL_PATTERN_ID,
+      levelRef: this.activeLevelId ?? undefined,
     })
     this.chainIds.push(wall.id)
   }
@@ -416,7 +426,7 @@ export class PlanEngine {
     this.chainStart = null
     if (points.length < 3) return
     this.model.getStore().beginCompoundEdit()
-    const room = this.model.addRoom(points)
+    const room = this.model.addRoom(points, { levelRef: this.activeLevelId ?? undefined })
     this.model.setSelection([room.id])
     this.model.getStore().endCompoundEdit()
   }
@@ -448,6 +458,7 @@ export class PlanEngine {
       xEnd: point.x,
       yEnd: point.y,
       offset: 0,
+      levelRef: this.activeLevelId ?? undefined,
     })
     this.model.setSelection([dim.id])
     this.model.getStore().endCompoundEdit()
@@ -463,7 +474,7 @@ export class PlanEngine {
 
   private labelClick(point: Point): void {
     this.model.getStore().beginCompoundEdit()
-    const label = this.model.addLabel({ text: 'Text', x: point.x, y: point.y })
+    const label = this.model.addLabel({ text: 'Text', x: point.x, y: point.y, levelRef: this.activeLevelId ?? undefined })
     this.model.setSelection([label.id])
     this.model.getStore().endCompoundEdit()
   }
@@ -559,10 +570,16 @@ export class PlanEngine {
     return connected
   }
 
+  private matchesActiveLevel(levelRef: string | null | undefined): boolean {
+    if (this.activeLevelId === null) return true
+    return (levelRef ?? null) === this.activeLevelId
+  }
+
   private hitTest(home: NormalizedHomeState, point: Point): HitResult | null {
     // 1. Wall endpoints first (highest priority)
     for (let i = home.walls.length - 1; i >= 0; i--) {
       const wall = home.walls[i]!
+      if (!this.matchesActiveLevel(wall.levelRef)) continue
       if (distance(point, { x: wall.xStart, y: wall.yStart }) <= ENDPOINT_HIT_RADIUS) {
         return { kind: 'wall-endpoint', wallId: wall.id, endpoint: 'start' }
       }
@@ -573,6 +590,7 @@ export class PlanEngine {
     // 2. Wall body
     for (let i = home.walls.length - 1; i >= 0; i--) {
       const wall = home.walls[i]!
+      if (!this.matchesActiveLevel(wall.levelRef)) continue
       const dist = distToSegment(
         point,
         { x: wall.xStart, y: wall.yStart },
@@ -585,6 +603,7 @@ export class PlanEngine {
     // 3. Furniture
     for (let i = home.furniture.length - 1; i >= 0; i--) {
       const f = home.furniture[i]!
+      if (!this.matchesActiveLevel(f.levelRef)) continue
       if (
         point.x >= f.x - f.width / 2 &&
         point.x <= f.x + f.width / 2 &&
@@ -596,16 +615,19 @@ export class PlanEngine {
     }
     // 4. Rooms
     for (const room of home.rooms) {
+      if (!this.matchesActiveLevel(room.levelRef)) continue
       if (this.pointInPolygon(point, room.points)) return { kind: 'room', id: room.id }
     }
     // 5. Labels
     for (const label of home.labels) {
+      if (!this.matchesActiveLevel(label.levelRef)) continue
       if (Math.abs(point.x - label.x) <= 20 && Math.abs(point.y - label.y) <= 10) {
         return { kind: 'label', id: label.id }
       }
     }
     // 6. Dimension lines
     for (const dim of home.dimensionLines) {
+      if (!this.matchesActiveLevel(dim.levelRef)) continue
       const dist = distToSegment(
         point,
         { x: dim.xStart, y: dim.yStart },

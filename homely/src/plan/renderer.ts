@@ -51,6 +51,11 @@ function formatLength(cm: number): string {
   return `${(cm / 100).toFixed(2)} m`
 }
 
+function matchesLevel(levelRef: string | null | undefined, activeLevelId: string | null): boolean {
+  if (activeLevelId === null) return true
+  return (levelRef ?? null) === activeLevelId
+}
+
 /** Shoelace formula — returns area in cm². */
 function shoelaceArea(points: Array<[number, number]>): number {
   let area = 0
@@ -68,6 +73,7 @@ export function fitToBounds(
   width: number,
   height: number,
   padding = 40,
+  activeLevelId: string | null = null,
 ): ViewTransform {
   let minX = Infinity
   let minY = Infinity
@@ -80,13 +86,16 @@ export function fitToBounds(
     maxY = Math.max(maxY, y)
   }
   for (const wall of home.walls) {
+    if (!matchesLevel(wall.levelRef, activeLevelId)) continue
     grow(wall.xStart, wall.yStart)
     grow(wall.xEnd, wall.yEnd)
   }
   for (const room of home.rooms) {
+    if (!matchesLevel(room.levelRef, activeLevelId)) continue
     for (const [x, y] of room.points) grow(x, y)
   }
   for (const f of home.furniture) {
+    if (!matchesLevel(f.levelRef, activeLevelId)) continue
     grow(f.x - f.width / 2, f.y - f.depth / 2)
     grow(f.x + f.width / 2, f.y + f.depth / 2)
   }
@@ -181,6 +190,7 @@ export function drawPlan(
   view: ViewTransform,
   canvasWidth?: number,
   canvasHeight?: number,
+  activeLevelId: string | null = null,
 ): void {
   const mapper = new ViewMapper(view)
   const selected = new Set(home.selection)
@@ -191,6 +201,7 @@ export function drawPlan(
 
   // Rooms (floor fill + area label).
   for (const room of home.rooms) {
+    if (!matchesLevel(room.levelRef, activeLevelId)) continue
     if (room.points.length < 3) continue
     ctx.beginPath()
     room.points.forEach(([x, y], index) => {
@@ -237,6 +248,7 @@ export function drawPlan(
 
   // Walls as filled thick shapes with mitered corners.
   for (const wall of home.walls) {
+    if (!matchesLevel(wall.levelRef, activeLevelId)) continue
     const outline = wallOutlinePoints(wall, home.walls)
     if (outline.length === 0) continue
     ctx.beginPath()
@@ -257,6 +269,7 @@ export function drawPlan(
   // Endpoint handles for selected walls.
   const HANDLE_SIZE = 6
   for (const wall of home.walls) {
+    if (!matchesLevel(wall.levelRef, activeLevelId)) continue
     if (!selected.has(wall.id)) continue
     for (const [ex, ey] of [[wall.xStart, wall.yStart], [wall.xEnd, wall.yEnd]] as const) {
       const px = mapper.sx(ex)
@@ -271,6 +284,7 @@ export function drawPlan(
 
   // Furniture as rotated rectangles.
   for (const f of home.furniture) {
+    if (!matchesLevel(f.levelRef, activeLevelId)) continue
     const angleRad = (f.angleDeg * Math.PI) / 180
     const cos = Math.cos(angleRad)
     const sin = Math.sin(angleRad)
@@ -315,6 +329,7 @@ export function drawPlan(
 
   // Dimension lines.
   for (const dim of home.dimensionLines) {
+    if (!matchesLevel(dim.levelRef, activeLevelId)) continue
     ctx.beginPath()
     ctx.moveTo(mapper.sx(dim.xStart), mapper.sy(dim.yStart))
     ctx.lineTo(mapper.sx(dim.xEnd), mapper.sy(dim.yEnd))
@@ -336,6 +351,7 @@ export function drawPlan(
 
   // Labels.
   for (const label of home.labels) {
+    if (!matchesLevel(label.levelRef, activeLevelId)) continue
     ctx.fillStyle = cssColor(
       label.color,
       selected.has(label.id) ? SELECTION_COLOR : LABEL_COLOR,
