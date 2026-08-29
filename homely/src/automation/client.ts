@@ -47,6 +47,11 @@ export class AutomationClient {
     private readonly handler: CommandHandler,
     options: AutomationClientOptions,
   ) {
+    // SECURITY (M17 audit): the app may only be driven by an orchestrator on
+    // this machine. Loopback-only is enforced below on purpose — see
+    // README.md "Security". Do not loosen the regex or accept other hosts:
+    // the protocol has no auth, so a remote orchestrator would get full
+    // unauthenticated control of the home (draw/delete/export).
     const url =
       options.url ?? `ws://127.0.0.1:${options.port ?? automationPortFromEnv() ?? 0}`
     if (!/^ws:\/\/127\.0\.0\.1:\d+$/.test(url)) {

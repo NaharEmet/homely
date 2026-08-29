@@ -28,6 +28,11 @@ sys.path.insert(0, str(EQ_DIR))
 from eq.adapters.server import AutomationServer, Session
 from mcp.server.fastmcp import FastMCP, Image
 
+# SECURITY (M17 audit): loopback-only by default, on purpose. The automation
+# protocol has no auth, so anything that can reach this port can register a
+# session and receive/answer its requests — keep it on 127.0.0.1 unless you
+# explicitly need LAN/cloud access (HOMELY_MCP_HOST), and then only on a
+# trusted network. See homely/src/automation/README.md "Security".
 HOST = os.environ.get("HOMELY_MCP_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HOMELY_MCP_PORT", "9529"))
 HTTP_PORT = int(os.environ["HOMELY_MCP_HTTP_PORT"]) if os.environ.get("HOMELY_MCP_HTTP_PORT") else None
