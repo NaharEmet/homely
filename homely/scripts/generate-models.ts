@@ -1,14 +1,19 @@
 #!/usr/bin/env node
 /**
- * generate-models.ts — Generate low-poly GLB furniture models (ticket U8).
+ * generate-models.ts — Generate low-poly GLB furniture models (ticket U8, M32).
  *
  *   npm run models          # regenerate all GLBs from the catalog manifest
  *   npm run models -- --check
  *
  * Uses three's GLTFExporter (no new deps) to build a recognizable low-poly
  * mesh per catalog item, sized in centimeters to its manifest dims, then
- * exports a `.glb` per catalogId into assets/models/. All models are
- * procedurally generated here — no third-party/licensed model files.
+ * exports a `.glb` per catalogId into assets/models/.
+ *
+ * For catalog items that have a matching Sweet Home 3D OBJ in
+ * ../../sweethome3d-7.5-wayland-patch/src/com/eteks/sweethome3d/io/resources/,
+ * the real SH3D geometry is loaded, uniformly scaled to the catalog bounds,
+ * centered on the floor, and exported. Missing or failing items fall back to
+ * the procedural low-poly shapes.
  *
  * The 3D view loads these via GLTFLoader (view3d/scene.ts swapInModel); the
  * catalog panel shows the same assets as thumbnails. Run `npm run assets`
@@ -17,6 +22,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { hasSh3dModel, convertSh3dModel } from './convert-sh3d-models.js'
 
 // GLTFExporter uses FileReader (browser-only) for the binary GLB path.
 // Provide a minimal Node polyfill before the exporter is imported.
@@ -260,6 +267,15 @@ function exportGlb(group: THREE.Group, outPath: string): void {
   )
 }
 
+function buildOrConvertModel(item: CatalogItem): THREE.Group {
+  if (hasSh3dModel(item.catalogId)) {
+    const converted = convertSh3dModel(item)
+    if (converted) return converted
+    console.warn(`[models] SH3D conversion failed for ${item.catalogId}, using procedural fallback`)
+  }
+  return buildModel(item)
+}
+
 function main(): void {
   const checkOnly = process.argv.includes('--check')
   const manifest = loadManifest()
@@ -276,7 +292,7 @@ function main(): void {
   }
 
   for (const item of manifest.items) {
-    const model = buildModel(item)
+    const model = buildOrConvertModel(item)
     exportGlb(model, join(MODELS_DIR, modelFileName(item.catalogId)))
   }
   console.log(`[models] done (${manifest.items.length} models)`)
