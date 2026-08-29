@@ -234,6 +234,7 @@ function buildToolbar(): void {
   for (const btn of toolbar.querySelectorAll<HTMLButtonElement>('button[data-tool]')) {
     btn.addEventListener('click', () => {
       try { engine.setTool(btn.dataset.tool as PlanTool) } catch { /* ignore */ }
+      catalogPanel?.disarm()
       refreshToolbar()
       refreshStatus()
     })

@@ -3,8 +3,8 @@
  *
  * Left sidebar panel: category list, search box, thumbnail grid, click-to-
  * place. Placing an item arms "place mode": the next click on the plan canvas
- * commits addFurniture at that point, and the piece stays armed for multiple
- * placement (SH3D parity). Escape exits place mode.
+ * commits addFurniture at that point, then automatically disarms (SH3D
+ * convention: one placement per catalog click). Escape also exits place mode.
  *
  * The panel talks only through the HomeModel (via a placement callback) so it
  * stays independent of the automation layer and MCP surface.
@@ -142,13 +142,16 @@ export class CatalogPanel {
   }
 
   /**
-   * Called by the plan canvas on click while armed. Places the item and stays
-   * armed for the next placement (SH3D catalog parity).
+   * Called by the plan canvas on click while armed. Places the item and
+   * automatically disarms, returning to selection mode (SH3D convention:
+   * place one item at a time; re-click the catalog piece to place another).
    */
   place(x: number, y: number, angleDeg = 0): string | null {
     const item = this.armed
     if (!item) return null
-    return this.onPlace(item, x, y, angleDeg)
+    const id = this.onPlace(item, x, y, angleDeg)
+    this.disarm()
+    return id
   }
 
   private attachResizeHandle(): void {
