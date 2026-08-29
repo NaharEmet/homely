@@ -64,25 +64,10 @@ were marked `done` without their DoD actually holding end-to-end. This track
 fixes what a real user hits first, then closes remaining SH3D feature gaps,
 then hardens agent-maintainability. Manager (Claude, this session) dispatches
 each ticket to an opencode worker, then independently re-verifies before
-`done` — same gatekeeper discipline as `engineering-manager.md`.
-
-**Model policy (2026-08-29, user directive):** `opencode-go` is fine to use
-— the ask is cost-awareness and good price/performance, not avoiding it.
-Check `quota_snapshot`'s `per_5h`/`tier` in `opencode_list_agents` before
-picking: opencode-go draws from a shared $12/5h + $30/week + $60/month
-dollar budget across every model on that provider, so the same budget buys
-far more requests on a high-volume-tier model than a scarce-tier one — weigh
-that against the ticket's actual difficulty rather than defaulting to the
-strongest/scarcest model available. The free `opencode` (OpenCode Zen) tier
-(`opencode/mimo-v2.5-free`, `opencode/hy3-free`, `opencode/big-pickle`) costs
-nothing and is a good default for mechanical/narrow tickets, but don't
-starve a genuinely hard ticket to save a fraction of a shared budget. Two
-real failure modes either way: opencode-go's weekly budget can exhaust
-mid-session under heavy concurrent use (hit mid-M32, wedged a session for a
-full day-long reset), and `tokenrouter/z-ai/glm-5.3-free` caps at 8 req/min
-shared across concurrent sessions (hit earlier, see M23/M24/M25 notes) —
-spread concurrent dispatches across models/providers rather than piling
-them onto one, regardless of tier.
+`done` — same gatekeeper discipline as `engineering-manager.md`. Model/
+provider selection policy lives in `.claude/agents/opencode-manager.md`
+(dispatch-planning section), not here — this file tracks tickets and
+board state, not manager process/config.
 
 **Audit findings (evidence for tickets below):**
 1. Plan view auto-refits (`fitToBounds`) on *every* render frame until the
