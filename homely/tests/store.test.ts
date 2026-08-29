@@ -100,6 +100,123 @@ describe('HomeStore undo/redo', () => {
   })
 })
 
+describe('undo history depth cap', () => {
+  it('drops the OLDEST entries beyond MAX_UNDO_DEPTH; recent history still works', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    // MAX_UNDO_DEPTH + 5 distinct cheap edits isolate the cap from geometry cost.
+    for (let i = 1; i <= HomeStore.MAX_UNDO_DEPTH + 5; i++) model.setName(`home-${i}`)
+    expect(store.getHome().name).toBe(`home-${HomeStore.MAX_UNDO_DEPTH + 5}`)
+
+    // Only the newest 100 undo steps survive: undoing to the bottom lands on
+    // edit #6 — the empty home and the first five edits are gone for good.
+    let undos = 0
+    while (store.undo()) undos++
+    expect(undos).toBe(HomeStore.MAX_UNDO_DEPTH)
+    expect(store.getHome().name).toBe('home-5')
+    expect(store.canUndo()).toBe(false)
+
+    // Recent history round-trips cleanly through redo.
+    expect(store.canRedo()).toBe(true)
+    let redos = 0
+    while (store.redo()) redos++
+    expect(redos).toBe(HomeStore.MAX_UNDO_DEPTH)
+    expect(store.getHome().name).toBe(`home-${HomeStore.MAX_UNDO_DEPTH + 5}`)
+    expect(store.canRedo()).toBe(false)
+    expect(store.canUndo()).toBe(true)
+  })
+
+  it('caps compound edits the same way (endCompoundEdit trims the oldest entry)', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    for (let i = 0; i < HomeStore.MAX_UNDO_DEPTH + 3; i++) {
+      store.beginCompoundEdit()
+      model.addWall(wallInput())
+      store.endCompoundEdit()
+    }
+    let undos = 0
+    while (store.undo()) undos++
+    expect(undos).toBe(HomeStore.MAX_UNDO_DEPTH)
+    // 3 oldest compound steps dropped: the bottom state has 3 walls, not 0.
+    expect(store.getHome().walls).toHaveLength(3)
+    expect(store.canUndo()).toBe(false)
+    expect(store.canRedo()).toBe(true)
+    expect(store.redo()).toBe(true)
+    expect(store.getHome().walls).toHaveLength(4)
+  })
+})
+
+describe('store scale benchmark (M18)', () => {
+  it('200 walls + 500 furniture: select-all, move wall, undo, redo, add furniture < 500ms', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+
+    // 200 walls as 10 rows of 20 chained segments (adjacent walls share
+    // endpoints, so the top-camera join scan sees a realistically joined
+    // plan), plus 500 furniture pieces spread across it.
+    const wallIds: string[] = []
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 20; col++) {
+        const x = col * 100
+        const y = row * 200
+        wallIds.push(
+          model.addWall({ xStart: x, yStart: y, xEnd: x + 100, yEnd: y, thickness: 7 }).id,
+        )
+      }
+    }
+    for (let i = 0; i < 500; i++) {
+      model.addFurniture({
+        name: 'chair',
+        x: (i % 25) * 80,
+        y: Math.floor(i / 25) * 80,
+        angleDeg: 0,
+        width: 45,
+        depth: 45,
+        height: 90,
+        elevation: 0,
+      })
+    }
+    expect(store.getHome().walls).toHaveLength(200)
+    expect(store.getHome().furniture).toHaveLength(500)
+
+    const timings: Record<string, number> = {}
+    const phase = (label: string, fn: () => void): void => {
+      const t0 = performance.now()
+      fn()
+      timings[label] = performance.now() - t0
+    }
+
+    const state = store.getHome()
+    const allIds = [...state.walls.map((w) => w.id), ...state.furniture.map((f) => f.id)]
+    phase('select-all (700 ids)', () => model.setSelection(allIds))
+    phase('move a wall', () => model.updateWall(wallIds[0]!, { xStart: 10, yStart: 10 }))
+    phase('undo', () => store.undo())
+    phase('redo', () => store.redo())
+    phase('add furniture', () =>
+      model.addFurniture({
+        name: 'one more',
+        x: 0,
+        y: 0,
+        angleDeg: 0,
+        width: 10,
+        depth: 10,
+        height: 10,
+        elevation: 0,
+      }),
+    )
+    phase('getHome()', () => store.getHome())
+
+    const total = Object.values(timings).reduce((a, b) => a + b, 0)
+    const report = Object.fromEntries(
+      Object.entries(timings).map(([k, v]) => [k, Number(v.toFixed(1))]),
+    )
+    console.log(
+      `[M18 benchmark] 200 walls + 500 furniture, per-phase ms: ${JSON.stringify(report)} total=${total.toFixed(1)}ms`,
+    )
+    expect(total).toBeLessThan(500)
+  })
+})
+
 describe('HomeModel validation', () => {
   it('rejects rooms with fewer than 3 points', () => {
     const model = new HomeModel(new HomeStore())
