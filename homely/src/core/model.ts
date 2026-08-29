@@ -192,7 +192,21 @@ export class HomeModel {
   }
 
   removeWall(id: string): boolean {
-    return this.removeFrom('walls', id, 'wall')
+    const snapshot = this.store.getHome()
+    assert(snapshot.walls.some((w) => w.id === id), `unknown wall id: ${id}`)
+    this.store.apply((h) => {
+      const index = h.walls.findIndex((w) => w.id === id)
+      if (index >= 0) h.walls.splice(index, 1)
+      const cascadeIds = new Set<string>()
+      for (const f of h.furniture) {
+        if (f.wallRef === id) cascadeIds.add(f.id)
+      }
+      if (cascadeIds.size > 0) {
+        h.furniture = h.furniture.filter((f) => !cascadeIds.has(f.id))
+      }
+      h.selection = h.selection.filter((sid) => sid !== id && !cascadeIds.has(sid))
+    })
+    return true
   }
 
   /**
@@ -471,14 +485,25 @@ export class HomeModel {
     for (const id of ids) {
       assert(found.has(id), `unknown id: ${id}`)
     }
+    const wallIds = new Set<string>()
+    for (const id of ids) {
+      if (snapshot.walls.some((w) => w.id === id)) wallIds.add(id)
+    }
+    const cascadeIds = new Set<string>()
+    if (wallIds.size > 0) {
+      for (const f of snapshot.furniture) {
+        if (f.wallRef && wallIds.has(f.wallRef)) cascadeIds.add(f.id)
+      }
+    }
+    const allRemovable = new Set([...wanted, ...cascadeIds])
     this.store.apply((h) => {
       for (const key of ['levels', 'walls', 'rooms', 'furniture', 'dimensionLines', 'labels'] as const) {
         const list = h[key] as unknown as IdLike[]
         ;(h as unknown as Record<typeof key, IdLike[]>)[key] = list.filter(
-          (item) => !wanted.has(item.id),
+          (item) => !allRemovable.has(item.id),
         )
       }
-      h.selection = h.selection.filter((id) => !wanted.has(id))
+      h.selection = h.selection.filter((id) => !allRemovable.has(id))
     })
     return true
   }

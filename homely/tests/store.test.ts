@@ -258,6 +258,111 @@ describe('HomeModel validation', () => {
     expect(store.getHome().selection).toEqual([])
   })
 
+  it('removeWall cascades to furniture with matching wallRef', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const wall = model.addWall(wallInput())
+    const furniture = model.addFurniture({
+      name: 'door',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+      wallRef: wall.id,
+      wallOffset: 0.5,
+    })
+    model.removeWall(wall.id)
+    const home = store.getHome()
+    expect(home.walls).toHaveLength(0)
+    expect(home.furniture).toHaveLength(0)
+  })
+
+  it('removeWall only cascades furniture referencing the deleted wall', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const wall1 = model.addWall(wallInput())
+    const wall2 = model.addWall({ ...wallInput(), xStart: 100, yStart: 100, xEnd: 200, yEnd: 100 })
+    model.addFurniture({
+      name: 'door1',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+      wallRef: wall1.id,
+      wallOffset: 0.5,
+    })
+    const sofa = model.addFurniture({
+      name: 'sofa',
+      x: 150,
+      y: 150,
+      angleDeg: 0,
+      width: 200,
+      depth: 80,
+      height: 80,
+      elevation: 0,
+    })
+    model.removeWall(wall1.id)
+    const home = store.getHome()
+    expect(home.walls).toHaveLength(1)
+    expect(home.walls[0]!.id).toBe(wall2.id)
+    expect(home.furniture).toHaveLength(1)
+    expect(home.furniture[0]!.id).toBe(sofa.id)
+  })
+
+  it('undo restores both wall and cascade-deleted furniture', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const wall = model.addWall(wallInput())
+    const door = model.addFurniture({
+      name: 'door',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+      wallRef: wall.id,
+      wallOffset: 0.5,
+    })
+    model.removeWall(wall.id)
+    expect(store.getHome().furniture).toHaveLength(0)
+    store.undo()
+    const restored = store.getHome()
+    expect(restored.walls).toHaveLength(1)
+    expect(restored.walls[0]!.id).toBe(wall.id)
+    expect(restored.furniture).toHaveLength(1)
+    expect(restored.furniture[0]!.wallRef).toBe(wall.id)
+  })
+
+  it('removeItems cascades furniture with matching wallRef', () => {
+    const store = new HomeStore()
+    const model = new HomeModel(store)
+    const wall = model.addWall(wallInput())
+    const door = model.addFurniture({
+      name: 'door',
+      x: 0,
+      y: 0,
+      angleDeg: 0,
+      width: 10,
+      depth: 10,
+      height: 10,
+      elevation: 0,
+      wallRef: wall.id,
+      wallOffset: 0.5,
+    })
+    model.removeItems([wall.id])
+    const home = store.getHome()
+    expect(home.walls).toHaveLength(0)
+    expect(home.furniture).toHaveLength(0)
+  })
+
   it('removeLevel nulls dangling levelRefs', () => {
     const store = new HomeStore()
     const model = new HomeModel(store)
