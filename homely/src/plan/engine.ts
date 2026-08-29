@@ -87,6 +87,8 @@ export class PlanEngine {
   private dimensionStart: Point | null = null
   private vertexDrag: { wallId: string; endpoint: 'start' | 'end'; startX: number; startY: number; connectedWalls: Array<{ wallId: string; endpoint: 'start' | 'end' }> } | null = null
   private activeLevelId: string | null = null
+  private wallHeightCm = DEFAULT_WALL_HEIGHT_CM
+  private wallThicknessCm = NEW_WALL_THICKNESS_CM
 
   constructor(model: HomeModel) {
     this.model = model
@@ -98,6 +100,15 @@ export class PlanEngine {
 
   getActiveLevel(): string | null {
     return this.activeLevelId
+  }
+
+  setWallDefaults(heightCm: number, thicknessCm: number): void {
+    this.wallHeightCm = heightCm
+    this.wallThicknessCm = thicknessCm
+  }
+
+  getWallDefaults(): { heightCm: number; thicknessCm: number } {
+    return { heightCm: this.wallHeightCm, thicknessCm: this.wallThicknessCm }
   }
 
   private homeSnapshot(): NormalizedHomeState {
@@ -375,8 +386,8 @@ export class PlanEngine {
       yStart: start.y,
       xEnd: end.x,
       yEnd: end.y,
-      thickness: NEW_WALL_THICKNESS_CM,
-      height: DEFAULT_WALL_HEIGHT_CM,
+      thickness: this.wallThicknessCm,
+      height: this.wallHeightCm,
       patternId: NEW_WALL_PATTERN_ID,
       levelRef: this.activeLevelId ?? undefined,
     })

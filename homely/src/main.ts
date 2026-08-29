@@ -11,6 +11,7 @@ import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { snapFurniturePlacement } from './plan/furniture-snap'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 import { saveHomeFile, loadHomeFile } from './services/adapters/home-persistence'
+import { PreferencesDialog, loadPreferences, hexToIntColor } from './ui/preferences'
 
 import { View3D, type CameraPresetName } from './view3d'
 import { PropertiesPanel } from './ui/properties-panel'
@@ -58,6 +59,13 @@ const ctx = canvas.getContext('2d')
 const store = new HomeStore()
 const model = new HomeModel(store)
 const engine = new PlanEngine(model)
+
+// Apply stored preferences (wall defaults, ground color).
+const bootPrefs = loadPreferences()
+engine.setWallDefaults(bootPrefs.wallHeightCm, bootPrefs.wallThicknessCm)
+store.patchNonUndoable((h) => {
+  h.environment.groundColor = hexToIntColor(bootPrefs.groundColor)
+})
 
 // Catalog panel — declared here (used by canvas/key closures) and
 // instantiated in boot once the DOM host exists.
@@ -174,6 +182,8 @@ function refreshMenus(): void {
         { label: '---' },
         { label: 'Delete', action: () => { engine.key('delete'); refreshAll() } },
         { label: 'Select All', action: () => selectAll() },
+        { label: '---' },
+        { label: 'Preferences…', action: () => openPreferences() },
       ],
     },
     {
@@ -191,6 +201,17 @@ function refreshMenus(): void {
       ],
     },
   ])
+}
+
+function openPreferences(): void {
+  const dialog = new PreferencesDialog(store, (prefs) => {
+    engine.setWallDefaults(prefs.wallHeightCm, prefs.wallThicknessCm)
+    store.patchNonUndoable((h) => {
+      h.environment.groundColor = hexToIntColor(prefs.groundColor)
+    })
+    refreshAll()
+  })
+  dialog.open()
 }
 
 // ── Toolbar ─────────────────────────────────────────────────────────────────

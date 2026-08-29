@@ -735,6 +735,88 @@ body {
   color: var(--accent, #4d94ff);
 }
 
+/* ── Preferences dialog ───────────────────────────────────────────── */
+
+.prefs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.prefs-dialog {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  min-width: 340px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.prefs-dialog h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+}
+
+.prefs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.prefs-row label {
+  flex: 0 0 180px;
+  font-size: 13px;
+}
+
+.prefs-row input,
+.prefs-row select {
+  flex: 1;
+  font-size: 13px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.prefs-row input[type="color"] {
+  padding: 2px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.prefs-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.prefs-btn {
+  padding: 5px 16px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.prefs-ok {
+  background: var(--active-tool-bg);
+  border-color: var(--accent, #4d94ff);
+  font-weight: 600;
+}
+
+.prefs-btn:hover {
+  opacity: 0.85;
+}
+
 @media (max-width: 799px) {
   #catalog-host {
     width: 100%;
