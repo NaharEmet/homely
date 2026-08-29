@@ -126,6 +126,28 @@ A ticket a worker can execute unsupervised needs all of these:
   (config cleanup, docs, small UI fixes) can run on a cheap or free-tier
   model. If the user names a specific model/provider to use, use exactly
   that one for every dispatch until told otherwise.
+- `opencode-go` is fine to use — the point is cost-awareness and picking
+  good price/performance, not avoiding it (user clarified this
+  2026-08-29 after an initial overcorrection). It draws from a shared
+  $12/5h + $30/week + $60/month dollar budget across every model on that
+  provider, so the same $1 of budget buys far more requests on a
+  high-volume-tier model (e.g. `mimo-v2.5`, `deepseek-v4-flash`,
+  `qwen3.7-plus`) than on a scarce-tier one (e.g. `glm-5.3`, `qwen3.8-max`)
+  — check `quota_snapshot`'s `per_5h`/`tier` in `opencode_list_agents`
+  before picking, and weigh that against the ticket's actual difficulty.
+  The free `opencode` (OpenCode Zen) tier — `opencode/mimo-v2.5-free`,
+  `opencode/hy3-free`, `opencode/big-pickle` — costs nothing and is a good
+  default for mechanical/narrow tickets, but don't hesitate to spend
+  opencode-go budget on a ticket that genuinely needs more capability;
+  starving a hard ticket to save a fraction of a shared budget is a false
+  economy. Two real failure modes to plan around either way: heavy
+  concurrent use of opencode-go can exhaust its whole weekly budget
+  mid-session (observed directly — a ticket wedged for a full day-long
+  reset), and the separate `tokenrouter` provider was found to cap at 8
+  requests/minute shared across concurrent sessions, wedging multiple
+  dispatches at once when over-parallelized on it. Spread concurrent
+  dispatches across models/providers rather than piling all of them onto
+  one, regardless of which tier you're drawing from.
 
 ## Running opencode
 
