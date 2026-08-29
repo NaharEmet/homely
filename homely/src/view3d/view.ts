@@ -467,14 +467,15 @@ export class View3D {
 
   private disposeSceneObjects(scene: THREE.Scene): void {
     scene.traverse((object) => {
-      const mesh = object as THREE.Mesh
-      if (!mesh.isMesh) return
-      // GLTF model children are shared with the scene.ts model cache; their
-      // geometry/material are owned by the cache and must not be disposed here.
-      if (mesh.userData.shared) return
-      mesh.geometry.dispose()
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      for (const material of materials) material.dispose()
+      if (object.userData.shared) return
+      const obj = object as THREE.Mesh | THREE.LineSegments | THREE.Line
+      if (!obj.geometry) return
+      obj.geometry.dispose()
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material]
+      for (const material of materials) {
+        if (!material) continue
+        material.dispose()
+      }
     })
   }
 }
