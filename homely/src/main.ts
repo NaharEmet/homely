@@ -11,6 +11,7 @@ import { PlanEngine, type PlanPreview, type PlanTool } from './plan/engine'
 import { snapFurniturePlacement } from './plan/furniture-snap'
 import { ViewMapper, drawPlan, fitToBounds, type PlanRenderingContext, type ViewTransform } from './plan/renderer'
 import { saveHomeFile, loadHomeFile } from './services/adapters/home-persistence'
+import { exportPlanPng } from './services/adapters/plan-export'
 import { PreferencesDialog, loadPreferences, hexToIntColor } from './ui/preferences'
 
 import { View3D, type CameraPresetName } from './view3d'
@@ -172,6 +173,8 @@ function refreshMenus(): void {
         { label: '---' },
         { label: 'Save', action: async () => { await saveHomeFile(store.getHome()) } },
         { label: 'Open', action: async () => { const home = await loadHomeFile(); if (home) { store.loadHome(home); doFit(); refreshAll() } } },
+        { label: '---' },
+        { label: 'Export Plan as PNG…', action: () => { exportPlanPng(store.getHome()) } },
       ],
     },
     {
@@ -888,8 +891,26 @@ function importModelFile(): void {
       if (!file) return
       void (async () => {
         try {
+          // Fail fast on obviously bad files before buffering anything.
+          const { MAX_IMPORT_BYTES, validateGlbData } = await import('./core/user-catalog')
+          if (file.size > MAX_IMPORT_BYTES) {
+            throw new Error(
+              `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB — the import limit is ${MAX_IMPORT_BYTES / 1024 / 1024} MB`,
+            )
+          }
           const data = await file.arrayBuffer()
+          validateGlbData(data, file.name)
           if (!userCatalog) throw new Error('catalog not ready')
+          // Scene rendering swallows model-load errors (gray box), so the
+          // bytes must parse cleanly before they join the catalog.
+          try {
+            const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+            await new GLTFLoader().parseAsync(data, '')
+          } catch {
+            throw new Error(
+              `${file.name} could not be parsed as a GLB model — the file may be corrupted or truncated`,
+            )
+          }
           const record = await userCatalog.import({
             fileName: file.name,
             data,
@@ -907,6 +928,8 @@ function importModelFile(): void {
           statusAutomation.textContent = `imported ${record.name}`
         } catch (err) {
           console.error('[catalog] import failed:', err)
+          const reason = err instanceof Error ? err.message : String(err)
+          catalogPanel?.renderStatusMessage(`Import failed: ${reason}`)
           statusAutomation.textContent = 'import failed'
         }
       })()

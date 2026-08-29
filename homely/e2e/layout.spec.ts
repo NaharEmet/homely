@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 
 test.describe('layout', () => {
@@ -53,7 +54,7 @@ test.describe('layout', () => {
     await page.locator('.menu-trigger').first().click()
     const dropdown = page.locator('.menu-item.open .menu-dropdown')
     await expect(dropdown).toBeVisible()
-    await expect(dropdown.locator('.menu-entry')).toHaveCount(3) // New, Save, Open (separator is not a .menu-entry)
+    await expect(dropdown.locator('.menu-entry')).toHaveCount(4) // New, Save, Open, Export Plan as PNG (separators are not .menu-entry)
   })
 
   test('clicking elsewhere closes the menu', async ({ page }) => {
@@ -72,5 +73,16 @@ test.describe('layout', () => {
   test('undo/redo buttons are disabled on empty home', async ({ page }) => {
     await expect(page.locator('#btn-undo')).toBeDisabled()
     await expect(page.locator('#btn-redo')).toBeDisabled()
+  })
+
+  test('File > Export Plan as PNG downloads a valid non-trivial PNG', async ({ page }) => {
+    await page.locator('.menu-trigger').first().click()
+    const entry = page.locator('.menu-item.open .menu-entry', { hasText: 'Export Plan as PNG' })
+    await expect(entry).toBeVisible()
+    const [download] = await Promise.all([page.waitForEvent('download'), entry.click()])
+    expect(download.suggestedFilename()).toBe('plan.png')
+    const file = readFileSync((await download.path())!)
+    expect([...file.slice(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    expect(file.byteLength).toBeGreaterThan(1000)
   })
 })
