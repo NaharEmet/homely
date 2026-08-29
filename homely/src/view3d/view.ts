@@ -166,21 +166,43 @@ export class View3D {
 
     if (this.controls) {
       this.cancelAnimation()
-      const targetPos = new THREE.Vector3(cam.x, cam.z, cam.y)
-      // Orbit around the home's bounds center (plan x,y → world x,z; height → y).
-      // Keeps the house framed for both presets, including the top camera which
-      // follows content in the store but would otherwise look at the origin.
-      const bounds = computeHomeBounds(this.store.getHome())
-      const center = new THREE.Vector3(
-        (bounds.minX + bounds.maxX) / 2,
-        (bounds.minZ + bounds.maxZ) / 2,
-        (bounds.minY + bounds.maxY) / 2,
-      )
+      const home = this.store.getHome()
+      const hasContent =
+        home.walls.length > 0 ||
+        home.rooms.length > 0 ||
+        home.furniture.length > 0 ||
+        home.dimensionLines.length > 0
 
       this.controls.enableDamping = false
-      this.perspectiveCamera.position.copy(targetPos)
-      this.controls.target.copy(center)
-      this.controls.update()
+      if (hasContent) {
+        const targetPos = new THREE.Vector3(cam.x, cam.z, cam.y)
+        // Orbit around the home's bounds center (plan x,y → world x,z; height → y).
+        // Keeps the house framed for both presets, including the top camera which
+        // follows content in the store but would otherwise look at the origin.
+        const bounds = computeHomeBounds(home)
+        const center = new THREE.Vector3(
+          (bounds.minX + bounds.maxX) / 2,
+          (bounds.minZ + bounds.maxZ) / 2,
+          (bounds.minY + bounds.maxY) / 2,
+        )
+        this.perspectiveCamera.position.copy(targetPos)
+        this.controls.target.copy(center)
+        this.controls.update()
+      } else {
+        // Nothing to frame yet — computeHomeBounds falls back to a tiny box
+        // near the origin, and for some presets that box sits directly
+        // beneath the camera, collapsing the "look at bounds center" orbit
+        // target to a near-vertical pitch (the 3D view of an empty home
+        // rendering as an uninformative wall-to-wall ground-plane gray).
+        // Use the preset's actual intended orientation instead.
+        this.applyCameraState(cam)
+        const dir = new THREE.Vector3()
+        this.perspectiveCamera.getWorldDirection(dir)
+        this.controls.target.copy(
+          this.perspectiveCamera.position.clone().addScaledVector(dir, 500),
+        )
+        this.controls.update()
+      }
       this.controls.enableDamping = true
     } else {
       this.applyCameraState(cam)
