@@ -1,0 +1,57 @@
+name: Dimension line and label via clicks
+description: Place a dimension line and label using their respective tools via click-to-place, assert positions and text.
+target:
+  os: [linux]
+  mode: [web]
+setup:
+  - command: new_home
+    params: {}
+steps:
+  - command: select_tool
+    params: {tool: dimensionLine}
+  - command: click
+    params: {x: 0, y: 0}
+  - command: click
+    params: {x: 500, y: 0}
+  - command: select_tool
+    params: {tool: label}
+  - command: click
+    params: {x: 250, y: 150}
+checkpoints:
+  - afterStep: 5
+    capture: [state, plan, 3d]
+assertions:
+  - at: 5
+    artifact: state
+    kind: count
+    path: dimensionLines
+    value: 1
+  - at: 5
+    artifact: state
+    kind: approx
+    path: dimensionLines.0.xStart
+    value: 0
+    tolerance: 1
+  - at: 5
+    artifact: state
+    kind: approx
+    path: dimensionLines.0.xEnd
+    value: 500
+    tolerance: 1
+  - at: 5
+    artifact: state
+    kind: count
+    path: labels
+    value: 1
+  - at: 5
+    artifact: state
+    kind: approx
+    path: labels.0.x
+    value: 250
+    tolerance: 1
+  - at: 5
+    artifact: state
+    kind: approx
+    path: labels.0.y
+    value: 150
+    tolerance: 1

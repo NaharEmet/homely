@@ -1,35 +1,59 @@
 {
-  "generated": "2026-08-28T17:04:20Z",
-  "wsPort": 43745,
+  "generated": "2026-08-29T05:17:52Z",
+  "wsPort": 43389,
   "scenarios": [
     {
       "scenario": "basic_room.yaml",
-      "runId": "20260828-170412-basic-rectangular-room",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170412-basic-rectangular-room",
+      "runId": "20260829-051743-basic-rectangular-room",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051743-basic-rectangular-room",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
+    },
+    {
+      "scenario": "dimension_and_label_clicks.yaml",
+      "runId": "20260829-051750-dimension-line-and-label-via-clicks",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051750-dimension-line-and-label-via-clicks",
       "ok": true,
       "errorCount": 0,
       "errors": []
     },
     {
       "scenario": "doors_windows.yaml",
-      "runId": "20260828-170419-doors-windows-cutouts",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170419-doors-windows-cutouts",
+      "runId": "20260829-051750-doors-windows-cutouts",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051750-doors-windows-cutouts",
       "ok": true,
       "errorCount": 0,
       "errors": []
     },
     {
       "scenario": "furniture_place.yaml",
-      "runId": "20260828-170420-furniture-placement-and-3d-render",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170420-furniture-placement-and-3d-render",
+      "runId": "20260829-051751-furniture-placement-and-3d-render",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051751-furniture-placement-and-3d-render",
       "ok": true,
       "errorCount": 0,
       "errors": []
     },
     {
       "scenario": "levels_and_annotations.yaml",
-      "runId": "20260828-170420-levels-dimensions-labels",
-      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260828-170420-levels-dimensions-labels",
+      "runId": "20260829-051751-levels-dimensions-labels",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051751-levels-dimensions-labels",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
+    },
+    {
+      "scenario": "levels_second_level.yaml",
+      "runId": "20260829-051751-second-level-with-levelref-scoping",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051751-second-level-with-levelref-scoping",
+      "ok": true,
+      "errorCount": 0,
+      "errors": []
+    },
+    {
+      "scenario": "room_tool_clicks.yaml",
+      "runId": "20260829-051752-room-tool-via-clicks",
+      "artifactsDir": "/home/nahar/Documents/code/house_designer/qa-loop/results/20260829-051752-room-tool-via-clicks",
       "ok": true,
       "errorCount": 0,
       "errors": []

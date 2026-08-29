@@ -1,0 +1,39 @@
+name: Room tool via clicks
+description: Draw a rectangular room using the room tool click-to-place, assert room exists with correct point count.
+target:
+  os: [linux]
+  mode: [web]
+setup:
+  - command: new_home
+    params: {}
+steps:
+  - command: select_tool
+    params: {tool: room}
+  - command: click
+    params: {x: 0, y: 0}
+  - command: click
+    params: {x: 600, y: 0}
+  - command: click
+    params: {x: 600, y: 400}
+  - command: click
+    params: {x: 0, y: 400}
+  - command: click
+    params: {x: 0, y: 0, dbl: true}
+checkpoints:
+  - afterStep: 6
+    capture: [state, plan, 3d]
+assertions:
+  - at: 6
+    artifact: state
+    kind: count
+    path: rooms
+    value: 1
+  - at: 6
+    artifact: state
+    kind: exists
+    path: rooms.0.points
+  - at: 6
+    artifact: state
+    kind: count
+    path: rooms.0.points
+    value: 4
