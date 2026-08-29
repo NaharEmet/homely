@@ -79,6 +79,20 @@ export function convertSh3dModel(item: CatalogItem): THREE.Group | null {
       roughness: 0.8,
       metalness: 0.05,
     })
+
+    const pngPath = join(SH3D_RESOURCES, `${name}.png`)
+    try {
+      accessSync(pngPath)
+      const img = document.createElement('img') as HTMLImageElement
+      img.src = `file://${pngPath}`
+      if (img.complete) {
+        fallbackMaterial.map = new THREE.Texture(img)
+        fallbackMaterial.map.needsUpdate = true
+      }
+    } catch {
+      // No matching PNG — keep flat color
+    }
+
     group.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.material = fallbackMaterial
@@ -156,7 +170,7 @@ function installNodePolyfills(): void {
   class NodeImage extends NodeEventTarget {
     complete = false
     crossOrigin: string | null = null
-    src = ''
+    private _src = ''
     width = 0
     height = 0
     private buffer: Buffer = Buffer.alloc(0)
@@ -165,11 +179,16 @@ function installNodePolyfills(): void {
       super()
       if (typeof widthOrUrl === 'string') {
         this.src = widthOrUrl
-        this.load(widthOrUrl)
       } else if (typeof widthOrUrl === 'number' && typeof height === 'number') {
         this.width = widthOrUrl
         this.height = height
       }
+    }
+
+    get src(): string { return this._src }
+    set src(url: string) {
+      this._src = url
+      if (url) this.load(url)
     }
 
     private load(url: string): void {
