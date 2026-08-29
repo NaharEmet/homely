@@ -33,7 +33,12 @@ export async function saveHomeFile(home: NormalizedHomeState): Promise<void> {
     const dialog = await tauriDialog()
     const path = await dialog.save({ defaultPath: 'home.json' })
     if (!path) return
-    await new TauriFsStorage().writeText(path, serializeForSave(home))
+    try {
+      await new TauriFsStorage().writeText(path, serializeForSave(home))
+    } catch (err) {
+      console.error(`Failed to save home file to ${path}:`, err)
+      throw new Error(`Failed to save home file to ${path}: ${err instanceof Error ? err.message : String(err)}`)
+    }
     return
   }
   const blob = new Blob([serializeForSave(home)], { type: 'application/json' })
@@ -51,8 +56,13 @@ export async function loadHomeFile(): Promise<NormalizedHomeState | null> {
     const dialog = await tauriDialog()
     const path = await dialog.open({ filters: [{ name: 'Homely', extensions: ['json'] }] })
     if (!path) return null
-    const text = await new TauriFsStorage().readText(path as string)
-    return parseHomeFile(text)
+    try {
+      const text = await new TauriFsStorage().readText(path as string)
+      return parseHomeFile(text)
+    } catch (err) {
+      console.error('Failed to load home file:', err)
+      return null
+    }
   }
   return await new Promise<NormalizedHomeState | null>((resolve) => {
     const input = document.createElement('input')
