@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "npm run assets",
     "assets": "tsx scripts/assets.ts",
     "assets:check": "tsx scripts/assets.ts --check",
     "models": "tsx scripts/generate-models.ts",
