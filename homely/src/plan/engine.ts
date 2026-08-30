@@ -279,7 +279,7 @@ export class PlanEngine {
     if (key !== 'escape' && key !== 'delete' && key !== 'backspace') {
       throw new ModelError(`unsupported key ${JSON.stringify(key)}`)
     }
-    if ((key === 'delete' || key === 'backspace') && this.tool === 'selection') {
+    if (key === 'delete' || key === 'backspace') {
       const selection = this.homeSnapshot().selection
       if (selection.length > 0) this.model.removeItems(selection)
       return

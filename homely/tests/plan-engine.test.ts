@@ -121,6 +121,27 @@ describe('wall tool state machine', () => {
     expect(engine.getPreview().phase).toBe('idle')
   })
 
+  it('delete key removes the selection without switching off the wall tool', () => {
+    const { engine, click, store } = setup()
+    engine.setTool('wall')
+    engine.setMagnetism(false)
+    click(0, 0)
+    click(100, 0)
+    click(100, 80)
+    click(0.5, 0.5, { dbl: true })
+
+    expect(store.getHome().walls).toHaveLength(3)
+    expect(engine.getTool()).toBe('wall')
+    expect(store.getHome().selection).toHaveLength(3)
+
+    engine.key('delete')
+    expect(store.getHome().walls).toHaveLength(0)
+    expect(store.getHome().selection).toEqual([])
+    expect(engine.getTool()).toBe('wall') // tool is unaffected by delete
+    expect(store.undo()).toBe(true)
+    expect(store.getHome().walls).toHaveLength(3)
+  })
+
   it('switching tools mid-chain commits the drawn walls first', () => {
     const { engine, click, store } = setup()
     engine.setTool('wall')
